@@ -1,0 +1,55 @@
+.editor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  .navbar {
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+  }
+  .main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  .sidebar {
+    width: 20%;
+    background-color: #f4f4f4;
+    border-right: 1px solid #ccc;
+    overflow-y: auto;
+    padding: 10px;
+  }
+  .canvas-container {
+    width: 60%;
+    background-color: #ddd;
+    border-right: 1px solid #ccc;
+    overflow: scroll;
+    overscroll-behavior-x: none;
+    position: relative;
+  }
+
+  .zoom-ratio {
+    position: fixed;
+    top: 60px;
+    left: calc(20% + 10px);
+    background-color: #007bff;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+  }
+
+  .canvas {
+    box-shadow: 0 0px 60px 16px #aaa;
+  }
+
+  .properties {
+    width: 20%;
+    background-color: #f9f9f9;
+    padding: 10px;
+    overflow-y: auto;
+  }
+}
