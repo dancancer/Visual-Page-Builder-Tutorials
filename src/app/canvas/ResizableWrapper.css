@@ -1,0 +1,108 @@
+.resizable-wrapper {
+  position: absolute;
+  box-sizing: border-box;
+  border: solid 1px rgb(0, 145, 255);
+  transition: outline 0.2s, border-width 0.2s, border-color 0.2s;
+  outline: solid 0px transparent;
+}
+
+.resizable-wrapper:hover {
+  border-color: rgb(0, 200, 255);
+}
+
+.resizable-wrapper.dragging {
+  opacity: 0.8;
+  border-style: dashed;
+}
+
+.resizable-wrapper.resizing {
+  border-color: rgb(255, 0, 0);
+}
+
+.resizable-wrapper.selected {
+  border-color: #1890ff;
+  border-width: 2px;
+  outline: 2px solid rgba(24, 144, 255, 0.2);
+}
+
+.resize-handles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.resize-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #fff;
+  border: 1px solid #1890ff;
+  pointer-events: auto;
+}
+
+.resize-handle:hover {
+  background-color: #1890ff;
+}
+
+.resize-handle.n {
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.resize-handle.s {
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.resize-handle.e {
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.resize-handle.w {
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.resize-handle.ne {
+  top: -4px;
+  right: -4px;
+  cursor: nesw-resize;
+}
+
+.resize-handle.nw {
+  top: -4px;
+  left: -4px;
+  cursor: nwse-resize;
+}
+
+.resize-handle.se {
+  bottom: -4px;
+  right: -4px;
+  cursor: nwse-resize;
+}
+
+.resize-handle.sw {
+  bottom: -4px;
+  left: -4px;
+  cursor: nesw-resize;
+}
+
+.drag-handle {
+  pointer-events: none;
+}
+
+.resizable-wrapper:hover .drag-handle {
+  pointer-events: auto;
+}
