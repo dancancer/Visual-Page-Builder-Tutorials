@@ -9,13 +9,13 @@ import { ComponentConfig } from '../common/types';
 import { PicComp, WrapComp } from '../components';
 import { eventBus } from '../utils/eventBus';
 import Head from 'next/head';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../innerComponents/uiComponents/DropdownMenu';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../innerComponents/uiComponents/Tooltip';
-import { ChevronRightIcon, ImageIcon, TextIcon, LayoutIcon, ContainerIcon, DashboardIcon, GridIcon } from '@radix-ui/react-icons';
+import { ImageIcon, TextIcon, LayoutIcon, ContainerIcon, DashboardIcon, GridIcon } from '@radix-ui/react-icons';
 import { sendMessageToCanvas, listenToCanvasMessages, MessagePayload } from '../utils/messageBus';
 import { editorStyles } from '../styles/editorStyles';
 import ZoomControl from '../innerComponents/ZoomControl';
 import TextToolbar from '../innerComponents/TextToolbar';
+import ComponentLibrary from '../innerComponents/ComponentLibrary';
 
 const components: ComponentConfig[] = [TextComp, PicComp, WrapComp];
 
@@ -72,12 +72,15 @@ function Page() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const { type, direction, component, componentId, styleUpdates, propUpdates } = event.data;
+      const { type, direction, component, componentId, styleUpdates, propUpdates, componentType, position } = event.data;
 
       if (type === 'zoom' && direction) {
         zoom(direction);
       } else if (type === 'componentSelected' && component) {
         setSelectedComponentId(component.id);
+      } else if (type === 'addComponent' && componentType) {
+        // 处理从画布拖拽添加组件
+        handleAddComponent(componentType);
       } else if (type === 'updateComponentStyle' && componentId > -1 && styleUpdates) {
         // 处理从 canvas 传来的样式更新
         const component = componentTree.find((item: ComponentConfig | undefined) => item?.id === componentId);
@@ -194,59 +197,7 @@ function Page() {
           </div>
 
           <div className={editorStyles.layout.sidebar}>
-            <DropdownMenu>
-              <DropdownMenuTrigger className={`${editorStyles.dropdown.trigger} ${editorStyles.text.primary}`}>
-                <span>基础组件</span>
-                <ChevronRightIcon className="w-4 h-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className={editorStyles.dropdown.content}>
-                <DropdownMenuItem
-                  className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}
-                  onSelect={() => handleAddComponent('Text')}
-                >
-                  <span className="ml-2">文本组件</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`} onSelect={() => handleAddComponent('Pic')}>
-                  <span className="ml-2">图片组件</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger className={`${editorStyles.dropdown.trigger} ${editorStyles.text.primary}`}>
-                <span>布局组件</span>
-                <ChevronRightIcon className="w-4 h-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className={editorStyles.dropdown.content}>
-                <DropdownMenuItem
-                  className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}
-                  onSelect={() => console.log('添加容器组件')}
-                >
-                  <span className="ml-2">容器</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}
-                  onSelect={() => console.log('添加栅格组件')}
-                >
-                  <span className="ml-2">栅格</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <div className={editorStyles.layout.divider}></div>
-
-          <div className="px-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button className={`${editorStyles.form.button} ${editorStyles.form.buttonPrimary}`} onClick={() => console.log('添加自定义组件')}>
-                    <span>添加自定义组件</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="px-2 py-1 text-xs bg-gray-900 text-white rounded">添加更多组件</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <ComponentLibrary />
           </div>
         </div>
 

@@ -302,8 +302,39 @@ function Page() {
 
   if (!root) return null;
 
+  // 处理拖拽放置事件
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const componentType = e.dataTransfer.getData('componentType');
+    if (componentType) {
+      // 获取鼠标位置
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // 向父窗口发送添加组件的消息
+      window.parent.postMessage(
+        {
+          type: 'addComponent',
+          componentType,
+          position: { x, y },
+        },
+        '*',
+      );
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
   return (
-    <div className="root bg-white relative" id="root">
+    <div 
+      className="root bg-white relative" 
+      id="root"
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+    >
       {renderComponent(root)}
       <AlignmentGuides guides={alignmentGuides} canvasWidth={900} canvasHeight={1600} />
     </div>
