@@ -13,6 +13,7 @@ import {
   calculateAlignmentGuides,
   DEFAULT_GRID_CONFIG,
   AlignmentGuide,
+  ComponentBounds,
 } from '../utils/snappingUtils';
 import { getTextComponentSize } from '../utils/textUtils';
 
@@ -125,6 +126,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   const [originPos, setOriginPos] = useState({ x: 0, y: 0 });
   const [isEditing, setIsEditing] = useState(false);
   const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
+  const [originalSize, setOriginalSize] = useState({ width: 0, height: 0, fontSize: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -152,6 +154,16 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
       setIsResizing(true);
       setResizeDirection(direction);
       setStartPos({ x: e.clientX, y: e.clientY });
+
+      // 保存原始尺寸和字体大小，用于计算缩放比例
+      if (componentConfig.compName === 'Text') {
+        const fontSize = parseInt(componentConfig.styleProps?.fontSize as string) || 16;
+        setOriginalSize({
+          width: size.width,
+          height: size.height,
+          fontSize: fontSize
+        });
+      }
 
       // 根据调整方向计算固定点坐标（使用文档坐标）
       let originX = position.x;
@@ -196,7 +208,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
       // 存储固定点坐标用于调整大小计算
       setOriginPos({ x: originX, y: originY });
     },
-    [size, position],
+    [size, position, componentConfig],
   );
 
   /**
@@ -275,8 +287,38 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         const originY = originPos.y;
 
         // 计算新的宽度和高度（使用绝对值确保为正数）
-        const newWidth = Math.max(MIN_DIMENSIONS.width, Math.abs(e.clientX - originX));
-        const newHeight = Math.max(MIN_DIMENSIONS.height, Math.abs(e.clientY - originY));
+        let newWidth = Math.max(MIN_DIMENSIONS.width, Math.abs(e.clientX - originX));
+        let newHeight = Math.max(MIN_DIMENSIONS.height, Math.abs(e.clientY - originY));
+
+        // 如果是文本组件，则保持等比缩放
+        if (componentConfig.compName === 'Text') {
+          // 获取原始尺寸
+          const originalWidth = size.width;
+          const originalHeight = size.height;
+          
+          // 根据调整方向确定主导维度
+          const aspectRatio = originalWidth / originalHeight;
+          
+          if (resizeDirection.includes('e') || resizeDirection.includes('w')) {
+            // 如果是水平方向调整，以宽度为主导
+            newHeight = newWidth / aspectRatio;
+          } else if (resizeDirection.includes('n') || resizeDirection.includes('s')) {
+            // 如果是垂直方向调整，以高度为主导
+            newWidth = newHeight * aspectRatio;
+          } else {
+            // 对角线调整，根据鼠标移动的主要方向决定
+            const deltaX = Math.abs(e.clientX - startPos.x);
+            const deltaY = Math.abs(e.clientY - startPos.y);
+            
+            if (deltaX > deltaY) {
+              // 水平移动更多，以宽度为主导
+              newHeight = newWidth / aspectRatio;
+            } else {
+              // 垂直移动更多，以高度为主导
+              newWidth = newHeight * aspectRatio;
+            }
+          }
+        }
 
         // 根据固定点和新的尺寸计算新的位置
         let newX = position.x;
@@ -324,7 +366,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         onResize?.(newWidth, newHeight);
       }
     },
-    [isDragging, isResizing, startPos, onMove, componentConfig, componentTree, originPos, position, resizeDirection, onResize],
+    [isDragging, isResizing, startPos, onMove, componentConfig, componentTree, originPos, position, resizeDirection, onResize, size],
   );
 
   /**
@@ -333,12 +375,30 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   const handleMouseUp = useCallback(() => {
     if (isResizing) {
       onResizeComplete?.(size.width, size.height);
-      updateComponentStyle({
+      
+      // 创建样式更新对象
+      const styleUpdates: Record<string, string> = {
         width: `${size.width}px`,
         height: `${size.height}px`,
         left: `${position.x}px`,
         top: `${position.y}px`,
-      });
+      };
+      
+      // 如果是文本组件，根据缩放比例调整字体大小
+      if (componentConfig.compName === 'Text' && originalSize.width > 0) {
+        // 计算缩放比例
+        const scaleFactor = size.width / originalSize.width;
+        
+        // 使用保存的原始字体大小
+        const originalFontSize = originalSize.fontSize;
+        
+        // 计算新的字体大小并应用
+        const newFontSize = Math.max(8, Math.round(originalFontSize * scaleFactor));
+        styleUpdates.fontSize = `${newFontSize}px`;
+      }
+      
+      // 更新组件样式
+      updateComponentStyle(styleUpdates);
     } else if (isDragging) {
       updateComponentStyle({
         left: `${position.x}px`,
@@ -348,7 +408,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
     setIsDragging(false);
     setIsResizing(false);
     setAlignmentGuides([]);
-  }, [isResizing, isDragging, size, position, onResizeComplete, updateComponentStyle]);
+  }, [isResizing, isDragging, size, position, onResizeComplete, updateComponentStyle, componentConfig, originalSize]);
 
   // 添加和移除事件监听器
   React.useEffect(() => {
