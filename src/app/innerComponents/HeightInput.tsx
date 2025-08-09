@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Input, Select } from 'antd';
+import React from 'react';
+import { Select, SelectItem } from './uiComponents/Select';
 import type { CSSProperties } from 'react';
-
-const { Option } = Select;
+import { editorStyles } from '../styles/editorStyles';
 
 type HeightUnit = 'px' | '%' | 'vh' | 'rem' | 'em' | 'auto' | 'max-content' | 'min-content' | 'fit-content';
 
@@ -51,10 +50,10 @@ const HeightInput: React.FC<HeightInputProps> = ({ value = '100px', onChange }) 
   };
 
   return (
-    <Input.Group compact>
+    <div className="flex">
       {!['auto', 'max-content', 'min-content', 'fit-content'].includes(unit) && (
-        <Input
-          style={{ width: 'calc(100% - 120px)' }}
+        <input
+          className={`${editorStyles.form.inputNumber} rounded-r-none`}
           type="number"
           value={numValue}
           onChange={(e) => handleNumberChange(e.target.value)}
@@ -62,22 +61,36 @@ const HeightInput: React.FC<HeightInputProps> = ({ value = '100px', onChange }) 
           step={1}
         />
       )}
-      <Select
-        style={{ width: 120 }}
-        value={unit}
-        onChange={handleUnitChange}
-      >
-        <Option value="px">px</Option>
-        <Option value="%">%</Option>
-        <Option value="vh">vh</Option>
-        <Option value="rem">rem</Option>
-        <Option value="em">em</Option>
-        <Option value="auto">auto</Option>
-        <Option value="max-content">max-content</Option>
-        <Option value="min-content">min-content</Option>
-        <Option value="fit-content">fit-content</Option>
+      <Select value={unit} onValueChange={handleUnitChange} className={editorStyles.select.trigger}>
+        <SelectItem value="px" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          px
+        </SelectItem>
+        <SelectItem value="%" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          %
+        </SelectItem>
+        <SelectItem value="vh" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          vh
+        </SelectItem>
+        <SelectItem value="rem" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          rem
+        </SelectItem>
+        <SelectItem value="em" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          em
+        </SelectItem>
+        <SelectItem value="auto" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          auto
+        </SelectItem>
+        <SelectItem value="max-content" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          max-content
+        </SelectItem>
+        <SelectItem value="min-content" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          min-content
+        </SelectItem>
+        <SelectItem value="fit-content" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          fit-content
+        </SelectItem>
       </Select>
-    </Input.Group>
+    </div>
   );
 };
 

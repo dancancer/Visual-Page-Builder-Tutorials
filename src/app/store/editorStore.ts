@@ -22,7 +22,6 @@ const useEditorStore = create<EditorStore>((set, get) => ({
   root: {
     id: -1,
     compName: 'Wrap',
-    styleProps: { width: '100%', height: '100%' },
     compProps: { fontSize: '32px', color: 'red' },
     parentId: null,
     children: [],
@@ -31,26 +30,38 @@ const useEditorStore = create<EditorStore>((set, get) => ({
   componentTree: [],
   componentTypes: [],
   selectedComponentId: null,
+  selectedComponent: null,
   triggerSwitch: () => {
     set((state) => ({ switch: !state.switch }));
   },
-  addComponent: (newComponet: ComponentConfig) => {
-    const { selectedComponentId, componentTree, root } = get();
+  addComponent: (newComponent: ComponentConfig) => {
+    const { selectedComponentId, componentTree, root, componentTypes } = get();
     // 为新组件添加 id
-    const _newComponet = { ...newComponet, id: componentTree.length };
+    const _newComponent = { ...newComponent, id: componentTree.length };
+
+    // 初始化组件的默认属性
+    const componentType = componentTypes.find((type) => type.compName === newComponent.compName);
+    if (componentType && componentType.config?.compProps) {
+      const defaultProps: Record<string, unknown> = {};
+      componentType.config.compProps.forEach((prop) => {
+        defaultProps[prop.key] = prop.defaultValue;
+      });
+      _newComponent.compProps = { ...defaultProps, ..._newComponent.compProps };
+    }
+
     const selectedComponent = selectedComponentId ? componentTree[selectedComponentId] : null;
     if (selectedComponent && selectedComponent.hasSlot) {
       // 如果选中的组件有插槽，那么新组件的父组件就是选中的组件
-      _newComponet.parentId = selectedComponentId;
+      _newComponent.parentId = selectedComponentId;
       const selectedComponentIndex = componentTree.findIndex((item) => item?.id === selectedComponentId);
-      componentTree[selectedComponentIndex]!.children = [...(componentTree[selectedComponentIndex]!.children || []), _newComponet.id];
+      componentTree[selectedComponentIndex]!.children = [...(componentTree[selectedComponentIndex]!.children || []), _newComponent.id];
     } else {
       // 否则，新组件的父组件就是根组件
-      _newComponet.parentId = root.id;
-      root.children = [...(root.children || []), _newComponet.id];
+      _newComponent.parentId = root.id;
+      root.children = [...(root.children || []), _newComponent.id];
       set(() => ({ root: { ...root } }));
     }
-    set(() => ({ componentTree: [...componentTree, _newComponet] }));
+    set(() => ({ componentTree: [...componentTree, _newComponent] }));
   },
   removeComponent: (id: number) => {
     const { componentTree } = get();
@@ -70,7 +81,8 @@ const useEditorStore = create<EditorStore>((set, get) => ({
     }
   },
   setSelectedComponentId: (id: number) => {
-    set(() => ({ selectedComponentId: id }));
+    const { componentTree } = get();
+    set(() => ({ selectedComponentId: id, selectedComponent: componentTree[id] }));
   },
   updateComponentProps: (id: number, newProps: ComponentConfig['compProps']) => {
     const { componentTree } = get();
@@ -80,7 +92,7 @@ const useEditorStore = create<EditorStore>((set, get) => ({
 
     newTree[id] = {
       ...component,
-      compProps: newProps,
+      compProps: { ...component.compProps, ...newProps },
     };
 
     set(() => ({ componentTree: newTree }));
@@ -93,7 +105,7 @@ const useEditorStore = create<EditorStore>((set, get) => ({
 
     newTree[id] = {
       ...component,
-      styleProps: newProps,
+      styleProps: { ...component.styleProps, ...newProps },
     };
 
     set(() => ({ componentTree: newTree }));

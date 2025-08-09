@@ -4,23 +4,28 @@ import React, { useCallback, useEffect } from 'react';
 import useEditorStore from '../store/editorStore';
 import './index.css';
 import PropertyPanel from '../innerComponents/PropertyPanel';
-// 引入 Ant Design 组件
-import { Menu, Button, Divider, Tooltip } from 'antd';
-import { FileTextOutlined, PictureOutlined, AppstoreOutlined, LayoutOutlined } from '@ant-design/icons';
 import TextComp from '../components/TextComp';
 import { ComponentConfig } from '../common/types';
 import { PicComp, WrapComp } from '../components';
 import { eventBus } from '../utils/eventBus';
+import Head from 'next/head';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../innerComponents/uiComponents/DropdownMenu';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../innerComponents/uiComponents/Tooltip';
+import { ChevronRightIcon, ImageIcon, TextIcon, LayoutIcon, ContainerIcon, DashboardIcon, GridIcon } from '@radix-ui/react-icons';
+import { sendMessageToCanvas, listenToCanvasMessages, MessagePayload } from '../utils/messageBus';
+import { editorStyles } from '../styles/editorStyles';
+import ZoomControl from '../innerComponents/ZoomControl';
+import TextToolbar from '../innerComponents/TextToolbar';
 
 const components: ComponentConfig[] = [TextComp, PicComp, WrapComp];
 
 function Page() {
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
   const canvasRef = React.useRef<HTMLDivElement>(null);
-  const canvasWraperRef = React.useRef<HTMLDivElement>(null);
-  const zoomRatioRef = React.useRef<HTMLDivElement>(null);
-  const zoomRatio = React.useRef(0.5);
-  const { root, componentTree, updateComponentStyleProps, setSelectedComponentId, addComponent, addComponentType } = useEditorStore((state) => state);
+  const canvasWarperRef = React.useRef<HTMLDivElement>(null);
+  const zoomRatio = React.useRef(0.4);
+  const { root, componentTree, updateComponentProps, updateComponentStyleProps, setSelectedComponentId, addComponent, addComponentType } =
+    useEditorStore((state) => state);
 
   useEffect(() => {
     const handleComponentStyleUpdate = (componentId: number, styleUpdates: Record<string, string>) => {
@@ -48,18 +53,18 @@ function Page() {
   }, [addComponentType]);
 
   const zoom = useCallback(
-    (deltaY: number) => {
-      if (deltaY < 0) {
-        console.log('放大...', deltaY);
-        zoomRatio.current = zoomRatio.current * (1 - deltaY * 0.01);
-      } else if (deltaY > 0) {
-        zoomRatio.current = zoomRatio.current * (1 - deltaY * 0.01);
-        console.log('缩小...', deltaY);
+    (direction: 'zoomIn' | 'zoomOut' | 'reset') => {
+      const step = 0.1;
+      if (direction === 'zoomIn') {
+        zoomRatio.current = Math.min(3, zoomRatio.current + step);
+      } else if (direction === 'zoomOut') {
+        zoomRatio.current = Math.max(0.1, zoomRatio.current - step);
+      } else if (direction === 'reset') {
+        zoomRatio.current = 1;
       }
       canvasRef.current!.style.transform = `scale(${zoomRatio.current})`;
-      canvasWraperRef.current!.style.width = `${1440 * zoomRatio.current + 400}px`;
-      canvasWraperRef.current!.style.height = `${1024 * zoomRatio.current + 400}px`;
-      zoomRatioRef.current!.innerText = `${Math.round(zoomRatio.current * 100)}%`;
+      canvasWarperRef.current!.style.width = `${900 * zoomRatio.current + 100}px`;
+      canvasWarperRef.current!.style.height = `${1600 * zoomRatio.current + 100}px`;
       document.dispatchEvent(new Event('canvas-zoom'));
     },
     [zoomRatio],
@@ -67,10 +72,10 @@ function Page() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const { type, deltaY, component, componentId, styleUpdates } = event.data;
+      const { type, direction, component, componentId, styleUpdates, propUpdates } = event.data;
 
-      if (type === 'zoom' && deltaY) {
-        zoom(deltaY);
+      if (type === 'zoom' && direction) {
+        zoom(direction);
       } else if (type === 'componentSelected' && component) {
         setSelectedComponentId(component.id);
       } else if (type === 'updateComponentStyle' && componentId > -1 && styleUpdates) {
@@ -81,10 +86,46 @@ function Page() {
           return;
         }
         updateComponentStyleProps(componentId, styleUpdates);
+      } else if (type === 'updateComponentProps' && componentId > -1 && propUpdates) {
+        // 处理从 canvas 传来的属性更新
+        const component = componentTree.find((item: ComponentConfig | undefined) => item?.id === componentId);
+        if (!component) {
+          console.error(`Component with id ${componentId} not found in componentTree`);
+          return;
+        }
+        updateComponentProps(componentId, propUpdates);
+      }
+    };
+
+    const handleCanvasMessage = (payload: MessagePayload) => {
+      switch (payload.type) {
+        case 'UPDATE_COMPONENT_PROPS':
+          // 处理从画布传来的属性更新
+          if (payload.componentId !== undefined && payload.componentId > -1) {
+            const component = componentTree.find((item: ComponentConfig | undefined) => item?.id === payload.componentId);
+            if (!component) {
+              console.error(`Component with id ${payload.componentId} not found in componentTree`);
+              return;
+            }
+            updateComponentProps(payload.componentId, payload.data);
+          }
+          break;
+        case 'UPDATE_COMPONENT_STYLE':
+          // 处理从画布传来的样式更新
+          if (payload.componentId !== undefined && payload.componentId > -1) {
+            const component = componentTree.find((item: ComponentConfig | undefined) => item?.id === payload.componentId);
+            if (!component) {
+              console.error(`Component with id ${payload.componentId} not found in componentTree`);
+              return;
+            }
+            updateComponentStyleProps(payload.componentId, payload.data);
+          }
+          break;
       }
     };
 
     window.addEventListener('message', handleMessage);
+    const unsubscribe = listenToCanvasMessages(handleCanvasMessage);
     document.addEventListener(
       'wheel',
       function (event: WheelEvent) {
@@ -92,7 +133,8 @@ function Page() {
           return;
         }
         event.preventDefault();
-        zoom(event.deltaY);
+        const direction = event.deltaY > 0 ? 'zoomOut' : 'zoomIn';
+        zoom(direction);
         return false;
       },
       { passive: false },
@@ -100,11 +142,16 @@ function Page() {
 
     return () => {
       window.removeEventListener('message', handleMessage);
+      unsubscribe();
     };
-  }, [zoom, setSelectedComponentId, componentTree, updateComponentStyleProps]);
+  }, [zoom, setSelectedComponentId, componentTree, updateComponentStyleProps, updateComponentProps]);
 
   useEffect(() => {
+    // 发送更新到画布iframe
     iframeRef.current!.contentWindow!.postMessage({ name: 'update', componentTree, root }, '*');
+
+    // 使用新的消息系统发送更新
+    sendMessageToCanvas('UPDATE_COMPONENT_TREE', { componentTree, root });
   }, [root, componentTree]);
 
   // 添加一个处理组件添加的公共函数
@@ -117,88 +164,103 @@ function Page() {
     [addComponent],
   );
 
-  // 定义菜单项
-  const menuItems = [
-    {
-      key: 'basic',
-      icon: <AppstoreOutlined />,
-      label: '基础组件',
-      children: [
-        {
-          key: 'Text', // 直接使用组件名称作为key
-          icon: <FileTextOutlined />,
-          label: '文本组件',
-        },
-        {
-          key: 'Pic', // 直接使用组件名称作为key
-          icon: <PictureOutlined />,
-          label: '图片组件',
-        },
-      ],
-    },
-    {
-      key: 'layout',
-      icon: <LayoutOutlined />,
-      label: '布局组件',
-      children: [
-        {
-          key: 'container',
-          label: '容器',
-        },
-        {
-          key: 'grid',
-          label: '栅格',
-        },
-      ],
-    },
-  ];
+  const onUpdateStyle = useCallback((styleUpdates) => {
+    const state = useEditorStore.getState();
+    if (state.selectedComponentId !== null && state.selectedComponentId >= 0) {
+      const component = state.componentTree[state.selectedComponentId];
+      if (component && component.compName === 'Text') {
+        // Update style props in the store
+        state.updateComponentStyleProps(state.selectedComponentId, styleUpdates);
+
+        // Send message to canvas
+        sendMessageToCanvas('UPDATE_COMPONENT_STYLE', styleUpdates, state.selectedComponentId);
+      }
+    }
+  }, []);
 
   return (
     <div className="editor">
+      <Head>
+        <title>Next webm -- Editor</title>
+        <meta name="description" content="Generated by Next webm -- Editor" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
       <div className="navbar">顶部导航+工具栏</div>
       <div className="main-container">
         <div className="sidebar">
           <div className="sidebar-header">
-            <h3 style={{ padding: '16px', margin: 0 }}>组件库</h3>
-            <Divider style={{ margin: '0 0 8px 0' }} />
+            <h3 className={`${editorStyles.layout.header} ${editorStyles.text.primary}`}>组件库</h3>
+            <div className={editorStyles.layout.divider}></div>
           </div>
 
-          <Menu
-            mode="inline"
-            style={{ borderRight: 0 }}
-            defaultOpenKeys={['basic']}
-            items={menuItems}
-            onClick={(info) => {
-              // 直接使用key作为组件名称
-              if (['Text', 'Pic'].includes(info.key)) {
-                handleAddComponent(info.key);
-              }
-            }}
-          />
+          <div className={editorStyles.layout.sidebar}>
+            <DropdownMenu>
+              <DropdownMenuTrigger className={`${editorStyles.dropdown.trigger} ${editorStyles.text.primary}`}>
+                <span>基础组件</span>
+                <ChevronRightIcon className="w-4 h-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className={editorStyles.dropdown.content}>
+                <DropdownMenuItem
+                  className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}
+                  onSelect={() => handleAddComponent('Text')}
+                >
+                  <span className="ml-2">文本组件</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`} onSelect={() => handleAddComponent('Pic')}>
+                  <span className="ml-2">图片组件</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          <Divider style={{ margin: '16px 0' }} />
+            <DropdownMenu>
+              <DropdownMenuTrigger className={`${editorStyles.dropdown.trigger} ${editorStyles.text.primary}`}>
+                <span>布局组件</span>
+                <ChevronRightIcon className="w-4 h-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className={editorStyles.dropdown.content}>
+                <DropdownMenuItem
+                  className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}
+                  onSelect={() => console.log('添加容器组件')}
+                >
+                  <span className="ml-2">容器</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}
+                  onSelect={() => console.log('添加栅格组件')}
+                >
+                  <span className="ml-2">栅格</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
-          <div style={{ padding: '0 16px' }}>
-            <Tooltip title="添加更多组件">
-              <Button type="primary" icon={<AppstoreOutlined />} block>
-                添加自定义组件
-              </Button>
-            </Tooltip>
+          <div className={editorStyles.layout.divider}></div>
+
+          <div className="px-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className={`${editorStyles.form.button} ${editorStyles.form.buttonPrimary}`} onClick={() => console.log('添加自定义组件')}>
+                    <span>添加自定义组件</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="px-2 py-1 text-xs bg-gray-900 text-white rounded">添加更多组件</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
-        <div className="canvas-container ">
-          <div className=" zoom-ratio" ref={zoomRatioRef}>{`${Math.round(zoomRatio.current * 100)}%`}</div>
+        <div className="canvas-container flex justify-center items-center">
           <div
-            className=" p-[200px]"
+            className=" p-[50px]"
             style={{
-              width: `${1440 * zoomRatio.current + 400}px`,
-              height: `${1024 * zoomRatio.current + 400}px`,
+              width: `${900 * zoomRatio.current + 100}px`,
+              height: `${1600 * zoomRatio.current + 100}px`,
             }}
-            ref={canvasWraperRef}
+            ref={canvasWarperRef}
           >
             <div
-              className=" canvas origin-top-left h-[1024px] w-[1440px]"
+              className=" canvas origin-top-left h-[1600px] w-[900px]"
               style={{
                 transform: `scale(${zoomRatio.current})`,
               }}
@@ -207,6 +269,8 @@ function Page() {
               <iframe className=" h-full w-full" src="/canvas" ref={iframeRef}></iframe>
             </div>
           </div>
+          <TextToolbar onUpdateStyle={onUpdateStyle} />
+          <ZoomControl zoomRatio={zoomRatio.current} onZoomChange={zoom} />
         </div>
         <div className="properties">
           <PropertyPanel />

@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Input, Select } from 'antd';
+import React from 'react';
+import { Select, SelectItem } from './uiComponents/Select';
 import type { CSSProperties } from 'react';
-
-const { Option } = Select;
+import { editorStyles } from '../styles/editorStyles';
 
 type FontSizeUnit = 'px' | 'rem' | 'em' | '%';
 
@@ -38,26 +37,30 @@ const FontSizeInput: React.FC<FontSizeInputProps> = ({ value = '16px', onChange 
   };
 
   return (
-    <Input.Group compact>
-      <Input
-        style={{ width: 'calc(100% - 80px)' }}
+    <div className="flex">
+      <input
+        className={`${editorStyles.form.inputNumber} rounded-r-none`}
         type="number"
         value={numValue}
         onChange={(e) => handleNumberChange(e.target.value)}
         min={0}
         step={0.1}
       />
-      <Select
-        style={{ width: 80 }}
-        value={unit}
-        onChange={handleUnitChange}
-      >
-        <Option value="px">px</Option>
-        <Option value="rem">rem</Option>
-        <Option value="em">em</Option>
-        <Option value="%">%</Option>
+      <Select value={unit} onValueChange={handleUnitChange} className={editorStyles.select.trigger}>
+        <SelectItem value="px" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          px
+        </SelectItem>
+        <SelectItem value="rem" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          rem
+        </SelectItem>
+        <SelectItem value="em" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          em
+        </SelectItem>
+        <SelectItem value="%" className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+          %
+        </SelectItem>
       </Select>
-    </Input.Group>
+    </div>
   );
 };
 

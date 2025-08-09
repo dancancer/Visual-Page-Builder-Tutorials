@@ -17,10 +17,10 @@ const WrapComp: ComponentConfig = {
     name: '容器',
     compProps: [],
   },
-  styleProps: {
-    width: '50px',
-    height: '50px',
-  },
+  // styleProps: {
+  //   width: '50px',
+  //   height: '50px',
+  // },
   compType: Wrap,
   domType: 'div',
   hasSlot: true,

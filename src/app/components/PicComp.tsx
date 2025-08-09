@@ -13,7 +13,7 @@ const Pic: React.FC<ComponentConfig> = (props) => {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      style={{ ...styleProps, userSelect: 'none' }}
+      style={{ userSelect: 'none' }}
       draggable="false"
       src={String(imageSrc || defaultPic.src)}
       height={height || '50px'}
@@ -40,6 +40,7 @@ const PicComp: ComponentConfig = {
   styleProps: {
     width: '50px',
     height: '50px',
+    position: 'absolute',
   },
   compType: Pic,
   domType: 'img',

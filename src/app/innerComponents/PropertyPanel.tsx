@@ -1,17 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Form, Input, InputNumber, Card, Select, Switch, Tabs, Collapse, Space, Button } from 'antd';
 import { PropConfig } from '../common/types';
 import useEditorStore from '../store/editorStore';
 import { useCanvasSync } from '../hooks/useCanvasSync';
-
-const { Option } = Select;
+import { useStoreSync } from '../hooks/useStoreSync';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './uiComponents/Tabs';
+import { Select, SelectItem } from './uiComponents/Select';
+import { Switch } from './uiComponents/Switch';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from './uiComponents/Collapsible';
+import { editorStyles } from '../styles/editorStyles';
 
 // CSS 属性分类
 const cssCategories = {
   layout: {
     name: '布局',
+    icon: '📐',
     properties: [
       {
         key: 'display',
@@ -68,6 +72,7 @@ const cssCategories = {
   },
   size: {
     name: '尺寸',
+    icon: '📏',
     properties: [
       { key: 'width', label: '宽度', type: 'string' },
       { key: 'height', label: '高度', type: 'string' },
@@ -88,6 +93,7 @@ const cssCategories = {
   },
   spacing: {
     name: '间距',
+    icon: '↔️',
     properties: [
       { key: 'margin', label: '外边距', type: 'string' },
       { key: 'marginTop', label: '上外边距', type: 'string' },
@@ -103,6 +109,7 @@ const cssCategories = {
   },
   typography: {
     name: '文字',
+    icon: '🔤',
     properties: [
       { key: 'fontFamily', label: '字体', type: 'string' },
       { key: 'fontSize', label: '字号', type: 'string' },
@@ -174,6 +181,7 @@ const cssCategories = {
   },
   background: {
     name: '背景',
+    icon: '🎨',
     properties: [
       { key: 'backgroundColor', label: '背景色', type: 'color' },
       { key: 'backgroundImage', label: '背景图', type: 'string' },
@@ -203,6 +211,7 @@ const cssCategories = {
   },
   border: {
     name: '边框',
+    icon: '⬜',
     properties: [
       { key: 'border', label: '边框', type: 'string' },
       { key: 'borderWidth', label: '边框宽度', type: 'string' },
@@ -228,6 +237,7 @@ const cssCategories = {
   },
   flexbox: {
     name: '弹性布局',
+    icon: '🔗',
     properties: [
       {
         key: 'flexDirection',
@@ -309,6 +319,7 @@ const cssCategories = {
   },
   effects: {
     name: '效果',
+    icon: '✨',
     properties: [
       { key: 'opacity', label: '透明度', type: 'number', min: 0, max: 1, step: 0.1 },
       { key: 'boxShadow', label: '阴影', type: 'string' },
@@ -320,6 +331,7 @@ const cssCategories = {
   },
   other: {
     name: '其他',
+    icon: '🔧',
     properties: [
       {
         key: 'cursor',
@@ -411,7 +423,10 @@ const getElementCssProperties = (elementType: string) => {
 const PropertyPanel: React.FC = () => {
   const { selectedComponentId, componentTree, componentTypes } = useEditorStore((state) => state);
   const { syncComponentProps } = useCanvasSync();
+  const { syncComponentPropsToCanvas, syncComponentStyleToCanvas } = useStoreSync();
   const [activeTab, setActiveTab] = useState('props');
+  const [changedProperties, setChangedProperties] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
 
   // 添加监听确保样式同步
   useEffect(() => {
@@ -422,7 +437,7 @@ const PropertyPanel: React.FC = () => {
   }, [selectedComponentId, componentTree, activeTab]);
 
   if (selectedComponentId === null || selectedComponentId < 0 || !componentTree[selectedComponentId]) {
-    return <Card className="p-4">请选择一个组件</Card>;
+    return <div className={`${editorStyles.container.panel}`}>请选择一个组件</div>;
   }
 
   // 获取组件元数据
@@ -438,20 +453,53 @@ const PropertyPanel: React.FC = () => {
   const style = metadata?.styleProps || {};
 
   const handlePropChange = (propName: string, value: string | number | boolean) => {
-    syncComponentProps(selectedComponentId, {
+    const newProps = {
       ...component?.compProps,
       [propName]: value,
-    });
+    };
+
+    // 同步到画布iframe
+    syncComponentProps(selectedComponentId, newProps);
+
+    // 使用新的消息系统同步
+    syncComponentPropsToCanvas(selectedComponentId, newProps);
+
+    // Track changed property
+    const newChangedProperties = new Set(changedProperties);
+    newChangedProperties.add(propName);
+    setChangedProperties(newChangedProperties);
+
+    // Clear highlight after 1 second
+    setTimeout(() => {
+      const updatedChangedProperties = new Set(newChangedProperties);
+      updatedChangedProperties.delete(propName);
+      setChangedProperties(updatedChangedProperties);
+    }, 1000);
   };
 
   const handleStyleChange = (styleProp: string, value: string | number) => {
-    syncComponentProps(selectedComponentId, {
-      ...component?.compProps,
-      style: {
-        ...style,
-        [styleProp]: value,
-      },
-    });
+    const newStyle = {
+      ...style,
+      [styleProp]: value,
+    };
+
+    // Update style props in the store
+    useEditorStore.getState().updateComponentStyleProps(selectedComponentId, newStyle);
+
+    // 使用新的消息系统同步样式更新
+    syncComponentStyleToCanvas(selectedComponentId, newStyle);
+
+    // Track changed property
+    const newChangedProperties = new Set(changedProperties);
+    newChangedProperties.add(styleProp);
+    setChangedProperties(newChangedProperties);
+
+    // Clear highlight after 1 second
+    setTimeout(() => {
+      const updatedChangedProperties = new Set(newChangedProperties);
+      updatedChangedProperties.delete(styleProp);
+      setChangedProperties(updatedChangedProperties);
+    }, 1000);
   };
 
   const renderPropField = (propConfig: PropConfig) => {
@@ -459,31 +507,69 @@ const PropertyPanel: React.FC = () => {
 
     switch (propConfig.type) {
       case 'string':
-        return <Input value={value as string} onChange={(e) => handlePropChange(propConfig.key, e.target.value)} />;
+        return (
+          <input
+            className={editorStyles.form.input}
+            value={(value as string) || ''}
+            onChange={(e) => handlePropChange(propConfig.key, e.target.value)}
+            placeholder={`输入${propConfig.label}`}
+          />
+        );
       case 'number':
         return (
-          <InputNumber
-            className="w-full"
-            value={value as number}
+          <input
+            type="number"
+            className={editorStyles.form.inputNumber}
+            value={(value as number) || ''}
             min={propConfig.min}
             max={propConfig.max}
-            onChange={(val) => handlePropChange(propConfig.key, val as number)}
+            onChange={(e) => handlePropChange(propConfig.key, e.target.value ? Number(e.target.value) : 0)}
+            placeholder={`输入${propConfig.label}`}
           />
         );
       case 'color':
-        return <Input type="color" value={(value as string) || '#000000'} onChange={(e) => handlePropChange(propConfig.key, e.target.value)} />;
+        return (
+          <div className="flex items-center">
+            <input
+              type="color"
+              className="w-10 h-10 border border-gray-300 rounded-md cursor-pointer"
+              value={(value as string) || '#000000'}
+              onChange={(e) => handlePropChange(propConfig.key, e.target.value)}
+            />
+            <span className="ml-2 text-sm text-gray-600">{(value as string) || '#000000'}</span>
+          </div>
+        );
       case 'select':
         return (
           <Select
-            options={propConfig.options}
-            value={value as string | number}
-            onChange={(val: string | number) => handlePropChange(propConfig.key, val)}
-          />
+            value={(value as string) || ''}
+            onValueChange={(val) => handlePropChange(propConfig.key, val)}
+            className={editorStyles.select.triggerWithRadius}
+          >
+            {propConfig.options?.map((opt: { label: string; value: string | number }) => (
+              <SelectItem key={String(opt.value)} value={String(opt.value)} className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </Select>
         );
       case 'switch':
-        return <Switch checked={value as boolean} onChange={(val) => handlePropChange(propConfig.key, val)} />;
+        return (
+          <Switch
+            className="w-10 h-5 bg-gray-300 rounded-full relative data-[state=checked]:bg-blue-500 transition-colors"
+            checked={value as boolean}
+            onCheckedChange={(val) => handlePropChange(propConfig.key, val)}
+          />
+        );
       case 'image':
-        return <Input value={value as string} onChange={(e) => handlePropChange(propConfig.key, e.target.value)} />;
+        return (
+          <input
+            className={editorStyles.form.input}
+            value={(value as string) || ''}
+            onChange={(e) => handlePropChange(propConfig.key, e.target.value)}
+            placeholder={`输入图片URL`}
+          />
+        );
       default:
         return null;
     }
@@ -502,27 +588,50 @@ const PropertyPanel: React.FC = () => {
 
     switch (propConfig.type) {
       case 'string':
-        return <Input value={value} onChange={(e) => handleStyleChange(propConfig.key, e.target.value)} />;
+        return (
+          <input
+            className={editorStyles.form.input}
+            value={value as string}
+            onChange={(e) => handleStyleChange(propConfig.key, e.target.value)}
+            placeholder={`输入${propConfig.label}`}
+          />
+        );
       case 'number':
         return (
-          <InputNumber
-            className="w-full"
-            value={value}
+          <input
+            type="number"
+            className={editorStyles.form.inputNumber}
+            value={(value as number) || ''}
             min={propConfig.min}
             max={propConfig.max}
             step={propConfig.step || 1}
-            onChange={(val) => handleStyleChange(propConfig.key, val ?? '')}
+            onChange={(e) => handleStyleChange(propConfig.key, e.target.value ? Number(e.target.value) : '')}
+            placeholder={`输入${propConfig.label}`}
           />
         );
       case 'color':
-        return <Input type="color" value={value || '#000000'} onChange={(e) => handleStyleChange(propConfig.key, e.target.value)} />;
+        return (
+          <div className="flex items-center">
+            <input
+              type="color"
+              className="w-10 h-10 border border-gray-300 rounded-md cursor-pointer"
+              value={(value as string) || '#000000'}
+              onChange={(e) => handleStyleChange(propConfig.key, e.target.value)}
+            />
+            <span className="ml-2 text-sm text-gray-600">{value || '#000000'}</span>
+          </div>
+        );
       case 'select':
         return (
-          <Select className="w-full" value={value} onChange={(val) => handleStyleChange(propConfig.key, val)}>
-            {propConfig.options?.map((opt: { label: string; value: string }) => (
-              <Option key={opt.value} value={opt.value}>
+          <Select
+            value={(value as string) || ''}
+            onValueChange={(val) => handleStyleChange(propConfig.key, val)}
+            className={editorStyles.select.triggerWithRadius}
+          >
+            {propConfig.options?.map((opt: { label: string; value: string | number }) => (
+              <SelectItem key={String(opt.value)} value={String(opt.value)} className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}>
                 {opt.label}
-              </Option>
+              </SelectItem>
             ))}
           </Select>
         );
@@ -534,72 +643,133 @@ const PropertyPanel: React.FC = () => {
   // 获取适用于当前组件的CSS属性类别
   const elementType = component.compName.toLowerCase();
   const applicableCategories = getElementCssProperties(elementType);
-  const applicableCategoriesItems = applicableCategories.map((categoryKey) => {
-    const category = cssCategories[categoryKey as keyof typeof cssCategories];
-    return {
-      key: categoryKey,
-      label: category.name,
-      children: (
-        <Form layout="vertical">
-          {category.properties.map((propConfig) => (
-            <Form.Item key={propConfig.key} label={propConfig.label}>
-              {renderStyleField({
-                ...propConfig,
-                type: propConfig.type as 'string' | 'number' | 'color' | 'select',
-              })}
-            </Form.Item>
-          ))}
-        </Form>
-      ),
-    };
-  });
+
+  // Filter categories and properties based on search term
+  const filteredCategoriesItems = applicableCategories
+    .map((categoryKey) => {
+      const category = cssCategories[categoryKey as keyof typeof cssCategories];
+
+      // If there's a search term, filter properties
+      let filteredProperties = category.properties;
+      if (searchTerm) {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        filteredProperties = category.properties.filter(
+          (prop) => prop.key.toLowerCase().includes(lowerSearchTerm) || prop.label.toLowerCase().includes(lowerSearchTerm),
+        );
+      }
+
+      // Only return category if it has matching properties
+      if (filteredProperties.length > 0) {
+        return {
+          key: categoryKey,
+          label: category.name,
+          icon: category.icon,
+          children: (
+            <div className={editorStyles.propertyPanel.propertyGrid}>
+              {filteredProperties.map((propConfig) => (
+                <div
+                  key={propConfig.key}
+                  className={`${editorStyles.propertyPanel.propertyItem} ${
+                    changedProperties.has(propConfig.key) ? 'bg-blue-50 border-l-4 border-blue-500 pl-3 -ml-4' : ''
+                  }`}
+                >
+                  <label className={editorStyles.propertyPanel.propertyLabel}>{propConfig.label}</label>
+                  {renderStyleField({
+                    ...propConfig,
+                    type: propConfig.type as 'string' | 'number' | 'color' | 'select',
+                  })}
+                </div>
+              ))}
+            </div>
+          ),
+        };
+      }
+      return null;
+    })
+    .filter(Boolean) as typeof applicableCategoriesItems;
 
   return (
-    <Card title={`${component.config?.name || '组件'}编辑`} className="p-4">
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={[
-          {
-            key: 'props',
-            label: '属性',
-            children: (
-              <Form layout="vertical">
-                {metadata?.config?.compProps.map((propConfig) => (
-                  <Form.Item key={propConfig.key} label={propConfig.label}>
-                    {renderPropField(propConfig)}
-                  </Form.Item>
-                ))}
-              </Form>
-            ),
-          },
-          {
-            key: 'styles',
-            label: '样式',
-            children: (
-              <>
-                <Collapse defaultActiveKey={['layout']} items={applicableCategoriesItems}></Collapse>
-                <div className="mt-4">
-                  <Space>
-                    <Button
-                      type="primary"
-                      onClick={() => {
-                        syncComponentProps(selectedComponentId, {
-                          ...component?.compProps,
-                          style: {},
-                        });
-                      }}
-                    >
-                      清空样式
-                    </Button>
-                  </Space>
-                </div>
-              </>
-            ),
-          },
-        ]}
-      />
-    </Card>
+    <div className={`${editorStyles.container.panel} ${editorStyles.text.primary}`}>
+      <h3 className={`text-lg font-medium mb-4 ${editorStyles.text.primary}`}>{`${component.config?.name || '组件'}编辑`}</h3>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className={editorStyles.tabs.list}>
+          <TabsTrigger
+            value="props"
+            className={`${editorStyles.tabs.trigger} ${editorStyles.text.secondary} data-[state=active]:${editorStyles.text.primary}`}
+          >
+            属性
+          </TabsTrigger>
+          <TabsTrigger
+            value="styles"
+            className={`${editorStyles.tabs.trigger} ${editorStyles.text.secondary} data-[state=active]:${editorStyles.text.primary}`}
+          >
+            样式
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="props">
+          <div className={editorStyles.container.section}>
+            {metadata?.config?.compProps.map((propConfig) => (
+              <div
+                key={propConfig.key}
+                className={`${editorStyles.container.item} ${
+                  changedProperties.has(propConfig.key) ? 'bg-blue-50 border-l-4 border-blue-500 pl-3 -ml-4' : ''
+                }`}
+              >
+                <label className={`${editorStyles.form.label} ${editorStyles.text.primary}`}>{propConfig.label}</label>
+                {renderPropField(propConfig)}
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+        <TabsContent value="styles">
+          <div className={editorStyles.container.section}>
+            <div className="mb-4">
+              <input
+                type="text"
+                className={editorStyles.form.input}
+                placeholder="搜索CSS属性..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            {filteredCategoriesItems.map((item) => (
+              <Collapsible key={item.key} defaultOpen={true}>
+                <CollapsibleTrigger className={editorStyles.collapsible.trigger}>
+                  <span className="flex items-center">
+                    <span className="mr-2">{item.icon}</span>
+                    {item.label}
+                  </span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="transform transition-transform duration-200 data-[state=open]:rotate-180"
+                  >
+                    <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                  </svg>
+                </CollapsibleTrigger>
+                <CollapsibleContent>{item.children}</CollapsibleContent>
+              </Collapsible>
+            ))}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                className={`${editorStyles.form.button} ${editorStyles.form.buttonSecondary}`}
+                onClick={() => {
+                  syncComponentProps(selectedComponentId, {
+                    ...component?.compProps,
+                    style: {},
+                  });
+                }}
+              >
+                清空样式
+              </button>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

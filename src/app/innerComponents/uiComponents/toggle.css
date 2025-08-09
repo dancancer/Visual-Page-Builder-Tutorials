@@ -1,0 +1,38 @@
+@import "@radix-ui/colors/black-alpha.css";
+@import "@radix-ui/colors/mauve.css";
+@import "@radix-ui/colors/violet.css";
+
+.Toggle {
+	background-color: white;
+	color: var(--mauve-11);
+	height: 35px;
+	padding: 0 15px;
+	display: flex;
+	font-size: 15px;
+	line-height: 1;
+	align-items: center;
+	justify-content: center;
+	border-radius: 4px;
+	user-select: none;
+	border: 1px solid var(--mauve-6);
+}
+
+.Toggle:hover {
+	background-color: var(--violet-3);
+}
+
+.Toggle[data-state="on"] {
+	background-color: var(--violet-5);
+	color: var(--violet-11);
+}
+
+.Toggle:focus {
+	position: relative;
+	box-shadow: 0 0 0 2px black;
+}
+
+.Toggle[data-disabled] {
+	color: var(--mauve-8);
+	background-color: var(--mauve-2);
+	cursor: not-allowed;
+}
