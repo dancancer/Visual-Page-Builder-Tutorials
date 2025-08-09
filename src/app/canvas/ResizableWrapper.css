@@ -25,6 +25,20 @@
   outline: 2px solid rgba(24, 144, 255, 0.2);
 }
 
+.resizable-wrapper.drag-over {
+  border-color: #52c41a;
+  border-width: 2px;
+  outline: 2px solid rgba(82, 196, 26, 0.2);
+  background-color: rgba(82, 196, 26, 0.1);
+}
+
+.resizable-wrapper.overlapping-slot {
+  border-color: #faad14;
+  border-width: 2px;
+  outline: 2px solid rgba(250, 173, 20, 0.2);
+  background-color: rgba(250, 173, 20, 0.1);
+}
+
 .resize-handles {
   position: absolute;
   width: 100%;

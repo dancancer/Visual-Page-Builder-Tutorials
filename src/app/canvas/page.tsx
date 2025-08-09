@@ -211,6 +211,20 @@ function Page() {
             }
           }
           break;
+        case 'ADD_CHILD_COMPONENT':
+          // 处理添加子组件
+          if (payload.data && payload.data.parentComponentId !== undefined && payload.data.componentType) {
+            // 向父窗口发送添加子组件的消息
+            window.parent.postMessage(
+              {
+                type: 'ADD_CHILD_COMPONENT',
+                parentComponentId: payload.data.parentComponentId,
+                componentType: payload.data.componentType,
+              },
+              '*',
+            );
+          }
+          break;
       }
     };
 

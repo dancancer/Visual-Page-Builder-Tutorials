@@ -10,7 +10,6 @@ interface AlignmentGuidesProps {
 }
 
 const AlignmentGuides: React.FC<AlignmentGuidesProps> = ({ guides, canvasWidth, canvasHeight }) => {
-  console.log('guides', guides);
   return (
     <>
       {guides.map((guide, index) => {

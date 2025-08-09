@@ -11,6 +11,7 @@ import {
   shouldSnapToGrid,
   calculateComponentBounds,
   calculateAlignmentGuides,
+  findOverlappingComponents,
   DEFAULT_GRID_CONFIG,
   AlignmentGuide,
   ComponentBounds,
@@ -121,6 +122,8 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   // 交互状态
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [overlappingSlotComponent, setOverlappingSlotComponent] = useState<ComponentConfig | null>(null);
   const [resizeDirection, setResizeDirection] = useState('');
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [originPos, setOriginPos] = useState({ x: 0, y: 0 });
@@ -135,6 +138,16 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
+
+      // 检查是否有拖拽数据，如果有则可能是拖入操作
+      const isDragFromLibrary = e.nativeEvent instanceof DragEvent && e.nativeEvent.dataTransfer?.types.includes('componentType');
+
+      if (isDragFromLibrary) {
+        // 如果是从组件库拖入的组件，阻止默认的拖拽行为
+        e.preventDefault();
+        return;
+      }
+
       setIsDragging(true);
       setStartPos({
         x: e.clientX - position.x,
@@ -161,7 +174,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         setOriginalSize({
           width: size.width,
           height: size.height,
-          fontSize: fontSize
+          fontSize: fontSize,
         });
       }
 
@@ -279,6 +292,29 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
             .filter(Boolean) as ComponentBounds[];
 
           updatedAlignmentGuides = calculateAlignmentGuides(currentBounds, otherBounds, DEFAULT_GRID_CONFIG.snapThreshold);
+
+          // 检查是否有重叠的具有 hasSlot 属性的组件
+          const overlappingComponents = findOverlappingComponents(currentBounds, otherBounds);
+          const slotComponents = overlappingComponents.filter((comp) => {
+            const component = componentTree.find((c) => c.id === comp.id);
+            return component?.compProps?.hasSlot;;
+          });
+
+          // 设置重叠的 slot 组件状态
+          if (slotComponents.length > 0) {
+            // 获取第一个重叠的 slot 组件
+            const overlappingComponent = componentTree.find((c) => c.id === slotComponents[0].id);
+            console.log('overlappingComponent', overlappingComponent);
+            setOverlappingSlotComponent(overlappingComponent || null);
+          } else {
+            console.log('overlappingComponents', overlappingComponents);
+            const comp = overlappingComponents[0];
+            if (comp) {
+              console.log(componentTree.find((c) => c.id === comp.id));
+            }
+
+            setOverlappingSlotComponent(null);
+          }
         }
         setAlignmentGuides(updatedAlignmentGuides);
       } else if (isResizing) {
@@ -295,10 +331,10 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
           // 获取原始尺寸
           const originalWidth = size.width;
           const originalHeight = size.height;
-          
+
           // 根据调整方向确定主导维度
           const aspectRatio = originalWidth / originalHeight;
-          
+
           if (resizeDirection.includes('e') || resizeDirection.includes('w')) {
             // 如果是水平方向调整，以宽度为主导
             newHeight = newWidth / aspectRatio;
@@ -309,7 +345,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
             // 对角线调整，根据鼠标移动的主要方向决定
             const deltaX = Math.abs(e.clientX - startPos.x);
             const deltaY = Math.abs(e.clientY - startPos.y);
-            
+
             if (deltaX > deltaY) {
               // 水平移动更多，以宽度为主导
               newHeight = newWidth / aspectRatio;
@@ -375,7 +411,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   const handleMouseUp = useCallback(() => {
     if (isResizing) {
       onResizeComplete?.(size.width, size.height);
-      
+
       // 创建样式更新对象
       const styleUpdates: Record<string, string> = {
         width: `${size.width}px`,
@@ -383,20 +419,20 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         left: `${position.x}px`,
         top: `${position.y}px`,
       };
-      
+
       // 如果是文本组件，根据缩放比例调整字体大小
       if (componentConfig.compName === 'Text' && originalSize.width > 0) {
         // 计算缩放比例
         const scaleFactor = size.width / originalSize.width;
-        
+
         // 使用保存的原始字体大小
         const originalFontSize = originalSize.fontSize;
-        
+
         // 计算新的字体大小并应用
         const newFontSize = Math.max(8, Math.round(originalFontSize * scaleFactor));
         styleUpdates.fontSize = `${newFontSize}px`;
       }
-      
+
       // 更新组件样式
       updateComponentStyle(styleUpdates);
     } else if (isDragging) {
@@ -404,11 +440,34 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         left: `${position.x}px`,
         top: `${position.y}px`,
       });
+
+      // 如果有重叠的 slot 组件，自动将当前组件添加为该 slot 组件的子组件
+      if (overlappingSlotComponent) {
+        // 向父窗口发送添加子组件的消息
+        sendMessageToParent('ADD_CHILD_COMPONENT', {
+          parentComponentId: overlappingSlotComponent.id,
+          componentType: componentConfig.compName,
+        });
+      }
     }
     setIsDragging(false);
     setIsResizing(false);
     setAlignmentGuides([]);
-  }, [isResizing, isDragging, size, position, onResizeComplete, updateComponentStyle, componentConfig, originalSize]);
+    setOverlappingSlotComponent(null);
+  }, [
+    isResizing,
+    isDragging,
+    onResizeComplete,
+    size.width,
+    size.height,
+    position.x,
+    position.y,
+    componentConfig.compName,
+    originalSize.width,
+    originalSize.fontSize,
+    updateComponentStyle,
+    overlappingSlotComponent,
+  ]);
 
   // 添加和移除事件监听器
   React.useEffect(() => {
@@ -444,6 +503,44 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
     return componentConfig.styleProps?.position || 'static';
   }, [componentConfig.styleProps]);
 
+  // 处理拖拽放置事件
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    // 只有当组件具有 hasSlot 属性为 true 时才处理拖入
+    if (componentConfig.hasSlot) {
+      const componentType = e.dataTransfer.getData('componentType');
+      if (componentType) {
+        // 向父窗口发送添加子组件的消息
+        sendMessageToParent('ADD_CHILD_COMPONENT', {
+          parentComponentId: componentConfig.id,
+          componentType,
+        });
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 只有当组件具有 hasSlot 属性为 true 时才允许拖入
+    if (componentConfig.hasSlot) {
+      e.dataTransfer.dropEffect = 'copy';
+      setIsDragOver(true);
+    } else {
+      e.dataTransfer.dropEffect = 'none';
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
   return (
     <ErrorBoundary>
       <div
@@ -452,7 +549,9 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         onBlur={handleBlur}
         ref={wrapperRef}
         id={`wrapper-${componentConfig.id}`}
-        className={`resizable-wrapper ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''} ${isSelected ? 'selected' : ''}`}
+        className={`resizable-wrapper ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''} ${isSelected ? 'selected' : ''} ${
+          isDragOver ? 'drag-over' : ''
+        } ${overlappingSlotComponent ? 'overlapping-slot' : ''}`}
         style={{
           ...componentConfig.styleProps,
           width: `${size.width + (isSelected ? 4 : 2)}px`,
@@ -466,6 +565,9 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
           onSelect?.();
         }}
         onDoubleClick={handleDoubleClick}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
       >
         {children}
         {isSelected && !isEditing && (

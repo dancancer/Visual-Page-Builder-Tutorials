@@ -10,6 +10,7 @@ interface EditorStore {
   componentTypes: ComponentConfig[]; // 新增：组件类型列表
   addComponent: (newComponent: ComponentConfig) => void;
   removeComponent: (id: number) => void;
+  reorderComponent: (draggedComponentId: number, targetComponentId: number) => void;
   selectedComponentId: number | null;
   setSelectedComponentId: (id: number) => void;
   updateComponentProps: (id: number, newProps: ComponentConfig['compProps']) => void;
@@ -43,23 +44,43 @@ const useEditorStore = create<EditorStore>((set, get) => ({
     const componentType = componentTypes.find((type) => type.compName === newComponent.compName);
     if (componentType && componentType.config?.compProps) {
       const defaultProps: Record<string, unknown> = {};
+      console.log(componentType);
       componentType.config.compProps.forEach((prop) => {
         defaultProps[prop.key] = prop.defaultValue;
       });
-      _newComponent.compProps = { ...defaultProps, ..._newComponent.compProps };
+      _newComponent.compProps = {
+        ...(defaultProps as Record<string, string | number | number[] | string[] | undefined>),
+        ..._newComponent.compProps,
+      };
     }
 
-    const selectedComponent = selectedComponentId ? componentTree[selectedComponentId] : null;
-    if (selectedComponent && selectedComponent.hasSlot) {
-      // 如果选中的组件有插槽，那么新组件的父组件就是选中的组件
-      _newComponent.parentId = selectedComponentId;
-      const selectedComponentIndex = componentTree.findIndex((item) => item?.id === selectedComponentId);
-      componentTree[selectedComponentIndex]!.children = [...(componentTree[selectedComponentIndex]!.children || []), _newComponent.id];
+    // 检查是否指定了 parentId
+    if (newComponent.parentId !== undefined && newComponent.parentId !== null) {
+      // 如果指定了 parentId，使用指定的父组件
+      _newComponent.parentId = newComponent.parentId;
+      const parentComponentIndex = componentTree.findIndex((item) => item?.id === newComponent.parentId);
+      if (parentComponentIndex !== -1) {
+        // 更新父组件的 children 数组
+        componentTree[parentComponentIndex]!.children = [...(componentTree[parentComponentIndex]!.children || []), _newComponent.id];
+      } else if (newComponent.parentId === root.id) {
+        // 如果父组件是根组件
+        root.children = [...(root.children || []), _newComponent.id];
+        set(() => ({ root: { ...root } }));
+      }
     } else {
-      // 否则，新组件的父组件就是根组件
-      _newComponent.parentId = root.id;
-      root.children = [...(root.children || []), _newComponent.id];
-      set(() => ({ root: { ...root } }));
+      // 如果没有指定 parentId，使用原来的逻辑
+      const selectedComponent = selectedComponentId ? componentTree[selectedComponentId] : null;
+      if (selectedComponent && selectedComponent.hasSlot) {
+        // 如果选中的组件有插槽，那么新组件的父组件就是选中的组件
+        _newComponent.parentId = selectedComponentId;
+        const selectedComponentIndex = componentTree.findIndex((item) => item?.id === selectedComponentId);
+        componentTree[selectedComponentIndex]!.children = [...(componentTree[selectedComponentIndex]!.children || []), _newComponent.id];
+      } else {
+        // 否则，新组件的父组件就是根组件
+        _newComponent.parentId = root.id;
+        root.children = [...(root.children || []), _newComponent.id];
+        set(() => ({ root: { ...root } }));
+      }
     }
     set(() => ({ componentTree: [...componentTree, _newComponent] }));
   },
@@ -79,6 +100,54 @@ const useEditorStore = create<EditorStore>((set, get) => ({
       newTree[parentComp.id!] = { ...parentComp, children: parentComp!.children?.filter((item) => item !== id) };
       set(() => ({ componentTree: newTree }));
     }
+  },
+  reorderComponent: (draggedComponentId: number, targetComponentId: number) => {
+    const { componentTree, root } = get();
+    const newTree = [...componentTree];
+    
+    // 获取被拖拽的组件和目标组件
+    const draggedComponent = newTree[draggedComponentId];
+    const targetComponent = newTree[targetComponentId];
+    
+    if (!draggedComponent || !targetComponent) {
+      return;
+    }
+    
+    // 获取被拖拽组件的原始父组件
+    const originalParentId = draggedComponent.parentId;
+    let originalParentComp;
+    if (originalParentId === root.id) {
+      originalParentComp = root;
+    } else {
+      originalParentComp = newTree[originalParentId!];
+    }
+    
+    // 从原始父组件的 children 中移除被拖拽的组件
+    if (originalParentComp) {
+      if (originalParentId === root.id) {
+        const newRoot = { ...root, children: root.children?.filter((id) => id !== draggedComponentId) };
+        set(() => ({ root: newRoot }));
+      } else {
+        newTree[originalParentId!] = {
+          ...originalParentComp,
+          children: originalParentComp.children?.filter((id) => id !== draggedComponentId),
+        };
+      }
+    }
+    
+    // 将被拖拽的组件添加到目标组件的 children 中
+    newTree[targetComponentId] = {
+      ...targetComponent,
+      children: [...(targetComponent.children || []), draggedComponentId],
+    };
+    
+    // 更新被拖拽组件的 parentId
+    newTree[draggedComponentId] = {
+      ...draggedComponent,
+      parentId: targetComponentId,
+    };
+    
+    set(() => ({ componentTree: newTree }));
   },
   setSelectedComponentId: (id: number) => {
     const { componentTree } = get();

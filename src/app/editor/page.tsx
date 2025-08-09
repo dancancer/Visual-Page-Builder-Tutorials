@@ -4,6 +4,7 @@ import React, { useCallback, useEffect } from 'react';
 import useEditorStore from '../store/editorStore';
 import './index.css';
 import PropertyPanel from '../innerComponents/PropertyPanel';
+import ComponentTreePanel from '../innerComponents/ComponentTreePanel';
 import TextComp from '../components/TextComp';
 import { ComponentConfig } from '../common/types';
 import { PicComp, WrapComp } from '../components';
@@ -124,6 +125,19 @@ function Page() {
             updateComponentStyleProps(payload.componentId, payload.data);
           }
           break;
+        case 'ADD_CHILD_COMPONENT':
+          // 处理从画布传来的添加子组件请求
+          if (payload.data && payload.data.parentComponentId !== undefined && payload.data.componentType) {
+            // 创建新的子组件
+            const newComponent = {
+              compName: payload.data.componentType,
+              parentId: payload.data.parentComponentId,
+            };
+
+            // 添加组件到指定的父组件
+            addComponent(newComponent);
+          }
+          break;
       }
     };
 
@@ -190,7 +204,7 @@ function Page() {
       </Head>
       <div className="navbar">顶部导航+工具栏</div>
       <div className="main-container">
-        <div className="sidebar">
+        {/* <div className="sidebar">
           <div className="sidebar-header">
             <h3 className={`${editorStyles.layout.header} ${editorStyles.text.primary}`}>组件库</h3>
             <div className={editorStyles.layout.divider}></div>
@@ -199,6 +213,10 @@ function Page() {
           <div className={editorStyles.layout.sidebar}>
             <ComponentLibrary />
           </div>
+        </div> */}
+
+        <div className="properties">
+          <ComponentTreePanel />
         </div>
 
         <div className="canvas-container flex justify-center items-center">

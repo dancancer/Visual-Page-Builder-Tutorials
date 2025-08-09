@@ -16,7 +16,7 @@ export type ComponentConfig = {
   domType?: string | undefined;
   styleProps?: React.CSSProperties | undefined;
   compProps?: {
-    [key: string]: number | number[] | string | string[] | undefined;
+    [key: string]: number | number[] | string | string[] | undefined | boolean;
   };
   parentId?: number | null;
   children?: Array<number> | undefined;
@@ -28,7 +28,7 @@ export type ComponentConfig = {
   };
 };
 
-export type PropType = 'string' | 'number' | 'color' | 'select' | 'switch' | 'image';
+export type PropType = 'string' | 'number' | 'color' | 'select' | 'switch' | 'image' | 'boolean';
 
 export interface ComponentMetadata {
   name: string;

@@ -214,3 +214,25 @@ export function calculateSnapPosition(
     snapType: 'none',
   };
 }
+
+/**
+ * Check if two components overlap
+ */
+export function checkComponentOverlap(component1: ComponentBounds, component2: ComponentBounds): boolean {
+  return (
+    component1.x < component2.x + component2.width &&
+    component1.x + component1.width > component2.x &&
+    component1.y < component2.y + component2.height &&
+    component1.y + component1.height > component2.y
+  );
+}
+
+/**
+ * Find overlapping components
+ */
+export function findOverlappingComponents(draggingComponent: ComponentBounds, components: ComponentBounds[]): ComponentBounds[] {
+  return components.filter(component => 
+    component.id !== draggingComponent.id && 
+    checkComponentOverlap(draggingComponent, component)
+  );
+}

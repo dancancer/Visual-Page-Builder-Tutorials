@@ -7,4 +7,5 @@ export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './Collapsib
 export { Separator } from './Separator';
 export { Slider } from './Slider';
 export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './DropdownMenu';
+export { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem } from './ContextMenu';
 export { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './Tooltip';
