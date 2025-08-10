@@ -169,46 +169,54 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         });
       }
 
-      // 根据调整方向计算固定点坐标（使用文档坐标）
-      let originX = position.x;
-      let originY = position.y;
+      // 获取元素的屏幕坐标
+      const rect = wrapperRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      // 根据调整方向计算固定点坐标（使用屏幕坐标）
+      let originX = rect.left;
+      let originY = rect.top;
 
       // 根据不同的调整方向确定固定点
       switch (direction) {
         case 'e': // 右边调整：固定左边
-          originX = position.x;
-          originY = position.y;
+          originX = rect.left;
+          originY = rect.top;
           break;
         case 'w': // 左边调整：固定右边
-          originX = position.x + size.width;
-          originY = position.y;
+          originX = rect.right;
+          originY = rect.top;
           break;
         case 's': // 下边调整：固定上边
-          originX = position.x;
-          originY = position.y;
+          originX = rect.left;
+          originY = rect.top;
           break;
         case 'n': // 上边调整：固定下边
-          originX = position.x;
-          originY = position.y + size.height;
+          originX = rect.left;
+          originY = rect.bottom;
           break;
         case 'ne': // 右上角调整：固定左下角
-          originX = position.x;
-          originY = position.y + size.height;
+          originX = rect.left;
+          originY = rect.bottom;
           break;
         case 'nw': // 左上角调整：固定右下角
-          originX = position.x + size.width;
-          originY = position.y + size.height;
+          originX = rect.right;
+          originY = rect.bottom;
           break;
         case 'se': // 右下角调整：固定左上角
-          originX = position.x;
-          originY = position.y;
+          originX = rect.left;
+          originY = rect.top;
           break;
         case 'sw': // 左下角调整：固定右上角
-          originX = position.x + size.width;
-          originY = position.y;
+          originX = rect.right;
+          originY = rect.top;
           break;
       }
 
+      console.log('originX', originX);
+      console.log('originY', originY);
+      console.log('position', position);
+      console.log('size', size);
       // 存储固定点坐标用于调整大小计算
       setOriginPos({ x: originX, y: originY });
     },
@@ -275,8 +283,6 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
 
           // 检查是否有重叠的具有 isContainer 属性的组件
           const overlappingComponents = findOverlappingComponents(currentBounds, otherBounds);
-          console.log('overlappingComponents', overlappingComponents);
-          console.log('otherBounds', otherBounds);
           const slotComponents = overlappingComponents.filter((comp) => {
             const component = componentTree.find((c) => c.id === comp.id);
             return component?.config?.isContainer;
@@ -300,6 +306,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         // 计算新的宽度和高度（使用绝对值确保为正数）
         let newWidth = Math.max(MIN_DIMENSIONS.width, Math.abs(e.clientX - originX));
         let newHeight = Math.max(MIN_DIMENSIONS.height, Math.abs(e.clientY - originY));
+        
 
         // 如果是文本组件，则保持等比缩放
         if (componentData.config?.compName === 'Text') {
@@ -331,6 +338,14 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
           }
         }
 
+        // 获取元素的当前屏幕坐标
+        const currentRect = wrapperRef.current?.getBoundingClientRect();
+        if (!currentRect) return;
+        
+        // 计算相对于文档的偏移量
+        const offsetX = position.x - (currentRect.left - window.scrollX);
+        const offsetY = position.y - (currentRect.top - window.scrollY);
+        
         // 根据固定点和新的尺寸计算新的位置
         let newX = position.x;
         let newY = position.y;
@@ -338,36 +353,44 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         // 根据不同的调整方向确定新位置
         switch (resizeDirection) {
           case 'e': // 右边调整：固定左边
-            newX = originX;
-            newY = originY;
+            // 左边固定，位置不变
+            newX = originX - window.scrollX + offsetX;
+            newY = originY - window.scrollY + offsetY;
             break;
           case 'w': // 左边调整：固定右边
-            newX = originX - newWidth;
-            newY = originY;
+            // 右边固定，左边位置需要调整
+            newX = originX - window.scrollX - newWidth + offsetX;
+            newY = originY - window.scrollY + offsetY;
             break;
           case 's': // 下边调整：固定上边
-            newX = originX;
-            newY = originY;
+            // 上边固定，位置不变
+            newX = originX - window.scrollX + offsetX;
+            newY = originY - window.scrollY + offsetY;
             break;
           case 'n': // 上边调整：固定下边
-            newX = originX;
-            newY = originY - newHeight;
+            // 下边固定，上边位置需要调整
+            newX = originX - window.scrollX + offsetX;
+            newY = originY - window.scrollY - newHeight + offsetY;
             break;
           case 'ne': // 右上角调整：固定左下角
-            newX = originX;
-            newY = originY - newHeight;
+            // 左下角固定，右上角位置需要调整
+            newX = originX - window.scrollX + offsetX;
+            newY = originY - window.scrollY - newHeight + offsetY;
             break;
           case 'nw': // 左上角调整：固定右下角
-            newX = originX - newWidth;
-            newY = originY - newHeight;
+            // 右下角固定，左上角位置需要调整
+            newX = originX - window.scrollX - newWidth + offsetX;
+            newY = originY - window.scrollY - newHeight + offsetY;
             break;
           case 'se': // 右下角调整：固定左上角
-            newX = originX;
-            newY = originY;
+            // 左上角固定，位置不变
+            newX = originX - window.scrollX + offsetX;
+            newY = originY - window.scrollY + offsetY;
             break;
           case 'sw': // 左下角调整：固定右上角
-            newX = originX - newWidth;
-            newY = originY;
+            // 右上角固定，左下角位置需要调整
+            newX = originX - window.scrollX - newWidth + offsetX;
+            newY = originY - window.scrollY + offsetY;
             break;
         }
 
@@ -415,8 +438,6 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         left: `${position.x}px`,
         top: `${position.y}px`,
       });
-      console.log('handleMouseUp', position);
-
       // 如果有重叠的 slot 组件，自动将当前组件添加为该 slot 组件的子组件
       if (overlappingSlotComponent) {
         const compRect = getComponentRect(componentData);

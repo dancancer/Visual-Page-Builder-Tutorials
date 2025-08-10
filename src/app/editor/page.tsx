@@ -34,8 +34,6 @@ function Page() {
 
   useEffect(() => {
     const handleComponentStyleUpdate = (componentId: number, styleUpdates: Record<string, string>) => {
-      console.log('componentId', componentId);
-      console.log('styleUpdates', styleUpdates);
       const component = componentTree.find((item: ComponentData | undefined) => item?.id === componentId);
       if (!component) {
         console.error(`Component with id ${componentId} not found in componentTree`);
