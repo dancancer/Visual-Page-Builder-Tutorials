@@ -50,7 +50,7 @@ export async function getFont(fontName: string, charSubset: string) {
   return null;
 }
 
-export async function getSvg(text: string, fontName: string, cache = true, fontSize = 24, colorStr = 'black') {
+async function getSvg(text: string, fontName: string, cache = true, fontSize = 24, colorStr = 'black') {
   const RegExp = /^[0-9A-F]{6}$/i;
   let color = colorStr;
   if (RegExp.test(color)) {
@@ -76,4 +76,14 @@ export async function getSvg(text: string, fontName: string, cache = true, fontS
     return svg;
   }
   return text;
+}
+
+export async function getFontList() {
+  const fontList: { name: string; svg: string }[] = [];
+  for (const key in fontMapping) {
+    const svg = await getSvg(key, key);
+    fontList.push({ name: key, svg });
+  }
+  console.log('fontList', fontList);
+  return fontList;
 }
