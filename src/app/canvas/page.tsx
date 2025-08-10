@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect } from 'react';
-import { ComponentConfig } from '../common/types';
+import { ComponentConfig, ComponentData } from '../common/types';
 import './index.css';
 import { TextComp, PicComp, WrapComp } from '../components';
 import useEditorStore from '../store/editorStore';
@@ -15,10 +15,12 @@ const components: ComponentConfig[] = [TextComp, PicComp, WrapComp];
 
 function Page() {
   // 组件状态管理
-  const [compTree, setCompTree] = React.useState<ComponentConfig[]>([]);
-  const [root, setRoot] = React.useState<ComponentConfig | undefined>(undefined);
-  const [selectedComponent, setSelectedComponent] = React.useState<ComponentConfig | null>(null);
-  const [alignmentGuides, setAlignmentGuides] = React.useState<{ type: 'vertical' | 'horizontal'; position: number; sourceComponentId?: number }[]>([]);
+  const [compTree, setCompTree] = React.useState<ComponentData[]>([]);
+  const [root, setRoot] = React.useState<ComponentData | undefined>(undefined);
+  const [selectedComponent, setSelectedComponent] = React.useState<ComponentData | null>(null);
+  const [alignmentGuides, setAlignmentGuides] = React.useState<{ type: 'vertical' | 'horizontal'; position: number; sourceComponentId?: number }[]>(
+    [],
+  );
   const { setSelectedComponentId, addComponentType } = useEditorStore();
 
   /**
@@ -27,9 +29,9 @@ function Page() {
    * @param component 当前组件配置
    * @returns 合并后的样式和属性配置
    */
-  const mergeComponentConfigs = (comp: ComponentConfig, component: ComponentConfig) => {
-    const mergedStyleConfig = { ...comp.styleProps, ...component.styleProps };
-    const mergedCompConfig = { ...comp.compProps, ...component.compProps };
+  const mergeComponentConfigs = (comp: ComponentConfig, component: ComponentData) => {
+    const mergedStyleConfig = { ...comp.defaultProps?.styleProps, ...component.styleProps };
+    const mergedCompConfig = { ...comp.defaultProps?.compProps, ...component.compProps };
     return { mergedStyleConfig, mergedCompConfig };
   };
 
@@ -37,7 +39,7 @@ function Page() {
    * 处理组件选中事件
    */
   const handleSelectComponent = useCallback(
-    (component: ComponentConfig) => {
+    (component: ComponentData) => {
       setSelectedComponent(component);
       setSelectedComponentId(component.id ?? -1);
       window.parent.postMessage(
@@ -56,13 +58,13 @@ function Page() {
    * 渲染组件树
    */
   const renderComponent = useCallback(
-    (component: ComponentConfig) => {
+    (component: ComponentData) => {
       const { children } = component;
 
       // 渲染子组件
       const childNodeList: React.ReactNode[] = children
         ? children.map((childId: number) => {
-            const child = compTree.find((item: ComponentConfig) => item.id === childId);
+            const child = compTree.find((item: ComponentData) => item.id === childId);
             if (!child) {
               console.error(`Child component with id ${childId} not found in compTree`);
               return null;
@@ -72,21 +74,23 @@ function Page() {
         : [];
 
       // 查找组件定义
-      const comp = components.find((comp) => comp.compName === component.compName);
+      const comp = components.find((comp) => comp.config.compName === component.config?.compName);
       if (!comp) return null;
 
       // 合并组件配置
       const { mergedStyleConfig, mergedCompConfig } = mergeComponentConfigs(comp, component);
       if (component.id === -1) {
         return (
-          comp.compType &&
+          comp.config.compType &&
           React.createElement(
-            comp.compType,
+            comp.config.compType,
             {
               compProps: mergedCompConfig,
               styleProps: mergedStyleConfig,
-              compName: component.compName,
-              compType: comp.compType,
+              config: {
+                name: comp.config.name,
+                compName: component.config?.compName || '',
+              },
             },
             ...childNodeList,
           )
@@ -95,20 +99,22 @@ function Page() {
       return (
         <ResizableWrapper
           key={component.id}
-          componentConfig={{ ...component, styleProps: mergedStyleConfig, compProps: mergedCompConfig }}
+          componentData={{ ...component, styleProps: mergedStyleConfig, compProps: mergedCompConfig }}
           isSelected={selectedComponent?.id === component.id}
           onSelect={() => handleSelectComponent(component)}
           onAlignmentGuidesChange={setAlignmentGuides}
           componentTree={compTree}
         >
-          {comp.compType &&
+          {comp.config.compType &&
             React.createElement(
-              comp.compType,
+              comp.config.compType,
               {
                 compProps: mergedCompConfig,
                 styleProps: mergedStyleConfig,
-                compName: component.compName,
-                compType: comp.compType,
+                config: {
+                  name: comp.config.name,
+                  compName: component.config?.compName || '',
+                },
               },
               ...childNodeList,
             )}
@@ -191,7 +197,7 @@ function Page() {
         case 'UPDATE_COMPONENT_TREE':
           // Type guard to check if payload.data is UpdateComponentTreeData
           if ('componentTree' in payload.data && 'root' in payload.data) {
-            const data = payload.data as { componentTree: ComponentConfig[]; root: ComponentConfig };
+            const data = payload.data as { componentTree: ComponentData[]; root: ComponentData };
             setCompTree(data.componentTree);
             setRoot(data.root);
           }
@@ -207,7 +213,7 @@ function Page() {
         case 'SELECT_COMPONENT':
           // 处理组件选择
           if (payload.componentId !== undefined) {
-            const component = compTree.find((item: ComponentConfig) => item.id === payload.componentId);
+            const component = compTree.find((item: ComponentData) => item.id === payload.componentId);
             if (component) {
               handleSelectComponent(component);
             }
@@ -216,13 +222,18 @@ function Page() {
         case 'ADD_CHILD_COMPONENT':
           // 处理添加子组件
           // Type guard to check if payload.data is AddChildComponentData
-          if ('parentComponentId' in payload.data && 'componentType' in payload.data && 
-              payload.data.parentComponentId !== undefined && payload.data.componentType) {
+          if (
+            'parentComponentId' in payload.data &&
+            'componentType' in payload.data &&
+            payload.data.parentComponentId !== undefined &&
+            payload.data.componentType !== undefined
+          ) {
             // 向父窗口发送添加子组件的消息
             window.parent.postMessage(
               {
                 type: 'ADD_CHILD_COMPONENT',
                 parentComponentId: payload.data.parentComponentId,
+                componentId: payload.data.componentId,
                 componentType: payload.data.componentType,
               },
               '*',
@@ -329,7 +340,7 @@ function Page() {
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      
+
       // 向父窗口发送添加组件的消息
       window.parent.postMessage(
         {
@@ -347,12 +358,7 @@ function Page() {
   };
 
   return (
-    <div 
-      className="root bg-white relative" 
-      id="root"
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-    >
+    <div className="root bg-white relative" id="root" onDrop={handleDrop} onDragOver={handleDragOver}>
       {renderComponent(root)}
       <AlignmentGuides guides={alignmentGuides} canvasWidth={900} canvasHeight={1600} />
     </div>

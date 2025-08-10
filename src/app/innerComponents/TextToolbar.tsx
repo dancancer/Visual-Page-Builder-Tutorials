@@ -25,7 +25,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ onUpdateStyle }) => {
   // Use separate selectors to avoid unnecessary re-renders
   const selectedComponentId = useEditorStore((state) => state.selectedComponentId);
   const componentTree = useEditorStore((state) => state.componentTree);
-  
+
   // Get the actual selected component from the component tree
   const selectedComponent = selectedComponentId !== null ? componentTree[selectedComponentId] : null;
 
@@ -36,7 +36,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ onUpdateStyle }) => {
 
   // Check if selected component is a text component
   useEffect(() => {
-    if (selectedComponent && selectedComponent.compName === 'Text') {
+    if (selectedComponent && selectedComponent.config?.compName === 'Text') {
       setIsVisible(true);
       const styleProps = selectedComponent.styleProps || {};
       setCurrentStyles(styleProps);

@@ -1,6 +1,6 @@
-import { ComponentConfig } from '../common/types';
+import { ComponentData } from '../common/types';
 
-export function deleteNodeAndChildren(tree: Array<ComponentConfig | undefined>, nodeId: number) {
+export function deleteNodeAndChildren(tree: Array<ComponentData | undefined>, nodeId: number) {
   // 创建一个 Set 用于存储所有需要删除的节点 ID
   const idsToDelete = new Set();
 

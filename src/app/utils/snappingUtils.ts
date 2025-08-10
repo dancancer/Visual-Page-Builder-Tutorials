@@ -1,4 +1,4 @@
-import { ComponentConfig } from '../common/types';
+import { ComponentData } from '../common/types';
 
 export interface GridConfig {
   enabled: boolean;
@@ -46,14 +46,14 @@ export const DEFAULT_GRID_CONFIG: GridConfig = {
 /**
  * Calculate component bounds from component config
  */
-export function calculateComponentBounds(component: ComponentConfig): ComponentBounds | null {
+export function calculateComponentBounds(component: ComponentData): ComponentBounds | null {
   if (!component.styleProps) return null;
-  
+
   const x = parseInt(component.styleProps.left as string) || 0;
   const y = parseInt(component.styleProps.top as string) || 0;
   const width = parseInt(component.styleProps.width as string) || 0;
   const height = parseInt(component.styleProps.height as string) || 0;
-  
+
   return {
     id: component.id || -1,
     x,
@@ -88,17 +88,13 @@ export function shouldSnapToGrid(position: number, gridPosition: number, thresho
 /**
  * Calculate alignment guides for a dragging component
  */
-export function calculateAlignmentGuides(
-  draggingBounds: ComponentBounds,
-  otherComponents: ComponentBounds[],
-  threshold: number
-): AlignmentGuide[] {
+export function calculateAlignmentGuides(draggingBounds: ComponentBounds, otherComponents: ComponentBounds[], threshold: number): AlignmentGuide[] {
   const guides: AlignmentGuide[] = [];
-  
+
   // Check alignment with other components
-  otherComponents.forEach(component => {
+  otherComponents.forEach((component) => {
     if (component.id === draggingBounds.id) return;
-    
+
     // Vertical alignments (left, center, right)
     if (Math.abs(draggingBounds.edges.left - component.edges.left) <= threshold) {
       guides.push({
@@ -107,7 +103,7 @@ export function calculateAlignmentGuides(
         sourceComponentId: component.id,
       });
     }
-    
+
     if (Math.abs(draggingBounds.edges.center - component.edges.center) <= threshold) {
       guides.push({
         type: 'vertical',
@@ -115,7 +111,7 @@ export function calculateAlignmentGuides(
         sourceComponentId: component.id,
       });
     }
-    
+
     if (Math.abs(draggingBounds.edges.right - component.edges.right) <= threshold) {
       guides.push({
         type: 'vertical',
@@ -123,7 +119,7 @@ export function calculateAlignmentGuides(
         sourceComponentId: component.id,
       });
     }
-    
+
     // Horizontal alignments (top, middle, bottom)
     if (Math.abs(draggingBounds.edges.top - component.edges.top) <= threshold) {
       guides.push({
@@ -132,7 +128,7 @@ export function calculateAlignmentGuides(
         sourceComponentId: component.id,
       });
     }
-    
+
     if (Math.abs(draggingBounds.edges.middle - component.edges.middle) <= threshold) {
       guides.push({
         type: 'horizontal',
@@ -140,7 +136,7 @@ export function calculateAlignmentGuides(
         sourceComponentId: component.id,
       });
     }
-    
+
     if (Math.abs(draggingBounds.edges.bottom - component.edges.bottom) <= threshold) {
       guides.push({
         type: 'horizontal',
@@ -149,26 +145,21 @@ export function calculateAlignmentGuides(
       });
     }
   });
-  
+
   return guides;
 }
 
 /**
  * Calculate snap position based on alignment guides
  */
-export function calculateSnapPosition(
-  position: number,
-  bounds: ComponentBounds,
-  guides: AlignmentGuide[],
-  isVertical: boolean
-): SnapResult {
+export function calculateSnapPosition(position: number, bounds: ComponentBounds, guides: AlignmentGuide[], isVertical: boolean): SnapResult {
   for (const guide of guides) {
     if (guide.type === 'vertical' && isVertical) {
       // For vertical snapping, adjust based on which edge is aligning
       const leftDiff = Math.abs(position - guide.position);
       const centerDiff = Math.abs(bounds.edges.center - guide.position);
       const rightDiff = Math.abs(bounds.edges.right - guide.position);
-      
+
       if (leftDiff <= DEFAULT_GRID_CONFIG.snapThreshold) {
         return {
           x: guide.position,
@@ -190,7 +181,7 @@ export function calculateSnapPosition(
       const topDiff = Math.abs(position - guide.position);
       const middleDiff = Math.abs(bounds.edges.middle - guide.position);
       const bottomDiff = Math.abs(bounds.edges.bottom - guide.position);
-      
+
       if (topDiff <= DEFAULT_GRID_CONFIG.snapThreshold) {
         return {
           y: guide.position,
@@ -209,7 +200,7 @@ export function calculateSnapPosition(
       }
     }
   }
-  
+
   return {
     snapType: 'none',
   };
@@ -231,8 +222,7 @@ export function checkComponentOverlap(component1: ComponentBounds, component2: C
  * Find overlapping components
  */
 export function findOverlappingComponents(draggingComponent: ComponentBounds, components: ComponentBounds[]): ComponentBounds[] {
-  return components.filter(component => 
-    component.id !== draggingComponent.id && 
-    checkComponentOverlap(draggingComponent, component)
+  return components.filter(
+    (component) => component.id !== draggingComponent.id && component.id !== -1 && checkComponentOverlap(draggingComponent, component),
   );
 }

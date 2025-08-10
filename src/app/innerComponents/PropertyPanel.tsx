@@ -442,11 +442,11 @@ const PropertyPanel: React.FC = () => {
 
   // 获取组件元数据
   const component = componentTree[selectedComponentId];
-  const originMetadata = componentTypes.find((type) => type.compName === component.compName);
+  const originMetadata = componentTypes.find((type) => type.config.compName === component.config?.compName);
   const metadata = {
     ...originMetadata,
-    styleProps: { ...originMetadata?.styleProps, ...component.styleProps },
-    compProps: { ...originMetadata?.compProps, ...component.compProps },
+    styleProps: { ...originMetadata?.defaultProps?.styleProps, ...component.styleProps },
+    compProps: { ...originMetadata?.defaultProps?.compProps, ...component.compProps },
   };
 
   // 确保正确获取组件样式
@@ -641,8 +641,8 @@ const PropertyPanel: React.FC = () => {
   };
 
   // 获取适用于当前组件的CSS属性类别
-  const elementType = component.compName.toLowerCase();
-  const applicableCategories = getElementCssProperties(elementType);
+  const elementType = component.config?.compName.toLowerCase();
+  const applicableCategories = getElementCssProperties(elementType!);
 
   // Filter categories and properties based on search term
   const filteredCategoriesItems = applicableCategories
@@ -687,11 +687,11 @@ const PropertyPanel: React.FC = () => {
       return null;
     })
     .filter(Boolean) as Array<{
-      key: string;
-      label: string;
-      icon: React.ReactNode;
-      children: React.ReactNode;
-    }>;
+    key: string;
+    label: string;
+    icon: React.ReactNode;
+    children: React.ReactNode;
+  }>;
 
   return (
     <div className={`${editorStyles.container.panel} ${editorStyles.text.primary}`}>
@@ -764,9 +764,7 @@ const PropertyPanel: React.FC = () => {
                 onClick={() => {
                   // Create a copy of compProps without the style property
                   const compProps = component?.compProps || {};
-                  const restProps = Object.fromEntries(
-                    Object.entries(compProps).filter(([key]) => key !== 'style')
-                  );
+                  const restProps = Object.fromEntries(Object.entries(compProps).filter(([key]) => key !== 'style'));
                   syncComponentProps(selectedComponentId, restProps);
                 }}
               >

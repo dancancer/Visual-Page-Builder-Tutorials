@@ -6,7 +6,7 @@ import './index.css';
 import PropertyPanel from '../innerComponents/PropertyPanel';
 import ComponentTreePanel from '../innerComponents/ComponentTreePanel';
 import TextComp from '../components/TextComp';
-import { ComponentConfig } from '../common/types';
+import { ComponentConfig, ComponentData } from '../common/types';
 import { PicComp, WrapComp } from '../components';
 import { eventBus } from '../utils/eventBus';
 import Head from 'next/head';
@@ -21,14 +21,22 @@ function Page() {
   const canvasRef = React.useRef<HTMLDivElement>(null);
   const canvasWarperRef = React.useRef<HTMLDivElement>(null);
   const zoomRatio = React.useRef(0.4);
-  const { root, componentTree, updateComponentProps, updateComponentStyleProps, setSelectedComponentId, addComponent, addComponentType } =
-    useEditorStore((state) => state);
+  const {
+    root,
+    componentTree,
+    updateComponentProps,
+    updateComponentStyleProps,
+    setSelectedComponentId,
+    addComponent,
+    addComponentType,
+    reorderComponent,
+  } = useEditorStore((state) => state);
 
   useEffect(() => {
     const handleComponentStyleUpdate = (componentId: number, styleUpdates: Record<string, string>) => {
       console.log('componentId', componentId);
       console.log('styleUpdates', styleUpdates);
-      const component = componentTree.find((item: ComponentConfig | undefined) => item?.id === componentId);
+      const component = componentTree.find((item: ComponentData | undefined) => item?.id === componentId);
       if (!component) {
         console.error(`Component with id ${componentId} not found in componentTree`);
         return;
@@ -70,9 +78,7 @@ function Page() {
   // 添加一个处理组件添加的公共函数
   const handleAddComponent = useCallback(
     (compName: string) => {
-      addComponent({
-        compName,
-      });
+      addComponent(compName);
     },
     [addComponent],
   );
@@ -90,7 +96,7 @@ function Page() {
         handleAddComponent(componentType);
       } else if (type === 'updateComponentStyle' && componentId > -1 && styleUpdates) {
         // 处理从 canvas 传来的样式更新
-        const component = componentTree.find((item: ComponentConfig | undefined) => item?.id === componentId);
+        const component = componentTree.find((item: ComponentData | undefined) => item?.id === componentId);
         if (!component) {
           console.error(`Component with id ${componentId} not found in componentTree`);
           return;
@@ -98,7 +104,7 @@ function Page() {
         updateComponentStyleProps(componentId, styleUpdates);
       } else if (type === 'updateComponentProps' && componentId > -1 && propUpdates) {
         // 处理从 canvas 传来的属性更新
-        const component = componentTree.find((item: ComponentConfig | undefined) => item?.id === componentId);
+        const component = componentTree.find((item: ComponentData | undefined) => item?.id === componentId);
         if (!component) {
           console.error(`Component with id ${componentId} not found in componentTree`);
           return;
@@ -112,38 +118,32 @@ function Page() {
         case 'UPDATE_COMPONENT_PROPS':
           // 处理从画布传来的属性更新
           if (payload.componentId !== undefined && payload.componentId > -1) {
-            const component = componentTree.find((item: ComponentConfig | undefined) => item?.id === payload.componentId);
+            const component = componentTree.find((item: ComponentData | undefined) => item?.id === payload.componentId);
             if (!component) {
               console.error(`Component with id ${payload.componentId} not found in componentTree`);
               return;
             }
-            updateComponentProps(payload.componentId, payload.data as ComponentConfig['compProps']);
+            updateComponentProps(payload.componentId, payload.data as ComponentData['compProps']);
           }
           break;
         case 'UPDATE_COMPONENT_STYLE':
           // 处理从画布传来的样式更新
           if (payload.componentId !== undefined && payload.componentId > -1) {
-            const component = componentTree.find((item: ComponentConfig | undefined) => item?.id === payload.componentId);
+            const component = componentTree.find((item: ComponentData | undefined) => item?.id === payload.componentId);
             if (!component) {
               console.error(`Component with id ${payload.componentId} not found in componentTree`);
               return;
             }
-            updateComponentStyleProps(payload.componentId, payload.data as ComponentConfig['styleProps']);
+            updateComponentStyleProps(payload.componentId, payload.data as ComponentData['styleProps']);
           }
           break;
         case 'ADD_CHILD_COMPONENT':
           // 处理从画布传来的添加子组件请求
-          // Type guard to check if payload.data is AddChildComponentData
-          if ('parentComponentId' in payload.data && 'componentType' in payload.data && 
-              payload.data.parentComponentId !== undefined && payload.data.componentType) {
-            // 创建新的子组件
-            const newComponent: ComponentConfig = {
-              compName: (payload.data as AddChildComponentData).componentType,
-              parentId: (payload.data as AddChildComponentData).parentComponentId,
-            };
-
+          const addChildComponentData = payload.data as AddChildComponentData;
+          if (addChildComponentData.parentComponentId !== undefined && addChildComponentData.componentId !== undefined) {
+            const { parentComponentId, componentId } = addChildComponentData;
             // 添加组件到指定的父组件
-            addComponent(newComponent);
+            reorderComponent(componentId as number, parentComponentId as number);
           }
           break;
       }
@@ -169,11 +169,20 @@ function Page() {
       window.removeEventListener('message', handleMessage);
       unsubscribe();
     };
-  }, [zoom, setSelectedComponentId, componentTree, updateComponentStyleProps, updateComponentProps, addComponent, handleAddComponent]);
+  }, [
+    zoom,
+    setSelectedComponentId,
+    componentTree,
+    updateComponentStyleProps,
+    updateComponentProps,
+    addComponent,
+    handleAddComponent,
+    reorderComponent,
+  ]);
 
   useEffect(() => {
     // 发送更新到画布iframe
-    iframeRef.current!.contentWindow!.postMessage({ name: 'update', componentTree, root }, '*');
+    // iframeRef.current!.contentWindow!.postMessage({ name: 'update', componentTree, root }, '*');
 
     // 使用新的消息系统发送更新
     sendMessageToCanvas('UPDATE_COMPONENT_TREE', { componentTree, root });
@@ -183,7 +192,7 @@ function Page() {
     const state = useEditorStore.getState();
     if (state.selectedComponentId !== null && state.selectedComponentId >= 0) {
       const component = state.componentTree[state.selectedComponentId];
-      if (component && component.compName === 'Text') {
+      if (component && component.config?.compName === 'Text') {
         // Update style props in the store
         state.updateComponentStyleProps(state.selectedComponentId, styleUpdates);
 

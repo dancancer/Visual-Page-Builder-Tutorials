@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useRef } from 'react';
+import { ComponentData } from '../common/types';
 import { ComponentConfig } from '../common/types';
 
 // 组件实现
-const Text: React.FC<ComponentConfig> = (props) => {
+const Text: React.FC<ComponentData> = (props) => {
   const { compProps } = props;
   const { content } = compProps || {};
   const textRef = useRef<HTMLParagraphElement>(null);
@@ -15,9 +16,10 @@ const Text: React.FC<ComponentConfig> = (props) => {
 
 // 组件配置
 const TextComp: ComponentConfig = {
-  compName: 'Text',
   config: {
     name: '文本',
+    compName: 'Text',
+    compType: Text,
     compProps: [
       {
         key: 'content',
@@ -26,11 +28,14 @@ const TextComp: ComponentConfig = {
         defaultValue: 'Hello World',
       },
     ],
+    isEditable: true,
+    isContainer: false,
   },
-  styleProps: {
-    position: 'absolute',
+  defaultProps: {
+    styleProps: {
+      position: 'absolute',
+    },
   },
-  compType: Text,
 };
 
 export default TextComp;

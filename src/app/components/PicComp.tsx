@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { ComponentConfig } from '../common/types';
+import { ComponentConfig, ComponentData } from '../common/types';
 import defaultPic from './assets/default.png';
 
 // 组件实现
-const Pic: React.FC<ComponentConfig> = (props) => {
+const Pic: React.FC<ComponentData> = (props) => {
   const { compProps, styleProps } = props;
   const { imageSrc } = compProps || {};
   const { width, height } = styleProps || {};
@@ -25,9 +25,11 @@ const Pic: React.FC<ComponentConfig> = (props) => {
 
 // 组件配置
 const PicComp: ComponentConfig = {
-  compName: 'Pic',
   config: {
+    compName: 'Pic',
     name: '图片',
+    compType: Pic,
+    domType: 'img',
     compProps: [
       {
         key: 'imageSrc',
@@ -37,13 +39,13 @@ const PicComp: ComponentConfig = {
       },
     ],
   },
-  styleProps: {
-    width: '50px',
-    height: '50px',
-    position: 'absolute',
+  defaultProps: {
+    styleProps: {
+      width: '50px',
+      height: '50px',
+      position: 'absolute',
+    },
   },
-  compType: Pic,
-  domType: 'img',
 };
 
 export default PicComp;

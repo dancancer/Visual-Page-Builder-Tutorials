@@ -9,9 +9,7 @@ const ComponentLibrary = () => {
   const addComponent = useEditorStore((state) => state.addComponent);
 
   const handleAddComponent = (compName: string) => {
-    addComponent({
-      compName,
-    });
+    addComponent(compName);
   };
 
   return (

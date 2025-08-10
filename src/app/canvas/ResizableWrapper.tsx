@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { ComponentConfig } from '../common/types';
+import { ComponentData } from '../common/types';
 import './ResizableWrapper.css';
 import ErrorBoundary from './ErrorBoundary';
 import { eventBus } from '../utils/eventBus';
@@ -29,17 +29,17 @@ const MIN_DIMENSIONS = {
  * @param componentConfig 组件配置
  * @returns 推荐的尺寸或 null（如果不是文本组件）
  */
-const calculateTextComponentRecommendedSize = (componentConfig: ComponentConfig): { width: number; height: number } | null => {
+const calculateTextComponentRecommendedSize = (data: ComponentData): { width: number; height: number } | null => {
   // 检查是否为文本组件
-  if (componentConfig.compName !== 'Text') {
+  if (data.config?.compName !== 'Text') {
     return null;
   }
 
   // 获取文本内容
-  const content = (componentConfig.compProps?.content as string) || '请输入文本内容';
+  const content = (data.compProps?.content as string) || '请输入文本内容';
 
   // 获取样式属性
-  const styleProps = componentConfig.styleProps || {};
+  const styleProps = data.styleProps || {};
 
   // 计算推荐尺寸
   const recommendedSize = getTextComponentSize(content, styleProps);
@@ -53,7 +53,7 @@ const calculateTextComponentRecommendedSize = (componentConfig: ComponentConfig)
 
 interface ResizableWrapperProps {
   children: React.ReactNode | React.ReactNode[];
-  componentConfig: ComponentConfig;
+  componentData: ComponentData;
   isSelected?: boolean;
   onSelect?: () => void;
   onResize?: (width: number, height: number) => void;
@@ -61,7 +61,7 @@ interface ResizableWrapperProps {
   onResizeComplete?: (width: number, height: number) => void;
   onTextEdit?: (text: string) => void;
   onAlignmentGuidesChange?: (guides: AlignmentGuide[]) => void; // New prop
-  componentTree?: ComponentConfig[]; // New prop for alignment calculations
+  componentTree?: ComponentData[]; // New prop for alignment calculations
 }
 
 /**
@@ -70,7 +70,7 @@ interface ResizableWrapperProps {
  */
 const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   children,
-  componentConfig,
+  componentData,
   isSelected,
   onSelect,
   onResize,
@@ -81,40 +81,40 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
 }) => {
   // 组件位置状态
   const [position, setPosition] = useState({
-    x: parseInt(componentConfig.styleProps?.left as string) || 0,
-    y: parseInt(componentConfig.styleProps?.top as string) || 0,
+    x: parseInt(componentData.styleProps?.left as string) || 0,
+    y: parseInt(componentData.styleProps?.top as string) || 0,
   });
 
   // 组件尺寸状态
   const [size, setSize] = useState(() => {
     // 首先检查是否为文本组件并计算推荐尺寸
-    const recommendedSize = calculateTextComponentRecommendedSize(componentConfig);
+    const recommendedSize = calculateTextComponentRecommendedSize(componentData);
     if (recommendedSize) {
       return recommendedSize;
     }
 
     // 否则使用原有的尺寸计算方式
     return {
-      width: parseInt(componentConfig.styleProps?.width as string) || MIN_DIMENSIONS.width,
-      height: parseInt(componentConfig.styleProps?.height as string) || MIN_DIMENSIONS.height,
+      width: parseInt(componentData.styleProps?.width as string) || MIN_DIMENSIONS.width,
+      height: parseInt(componentData.styleProps?.height as string) || MIN_DIMENSIONS.height,
     };
   });
 
   useEffect(() => {
-    if (componentConfig.compName === 'Text') {
+    if (componentData.config?.compName === 'Text') {
       // 检查是否为文本组件并计算推荐尺寸
-      const recommendedSize = calculateTextComponentRecommendedSize(componentConfig);
+      const recommendedSize = calculateTextComponentRecommendedSize(componentData);
       if (recommendedSize) {
         setSize(recommendedSize);
       }
     }
-  }, [componentConfig]);
+  }, [componentData]);
 
   // 交互状态
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [overlappingSlotComponent, setOverlappingSlotComponent] = useState<ComponentConfig | null>(null);
+  const [overlappingSlotComponent, setOverlappingSlotComponent] = useState<ComponentData | null>(null);
   const [resizeDirection, setResizeDirection] = useState('');
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [originPos, setOriginPos] = useState({ x: 0, y: 0 });
@@ -160,8 +160,8 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
       setStartPos({ x: e.clientX, y: e.clientY });
 
       // 保存原始尺寸和字体大小，用于计算缩放比例
-      if (componentConfig.compName === 'Text') {
-        const fontSize = parseInt(componentConfig.styleProps?.fontSize as string) || 16;
+      if (componentData.config?.compName === 'Text') {
+        const fontSize = parseInt(componentData.styleProps?.fontSize as string) || 16;
         setOriginalSize({
           width: size.width,
           height: size.height,
@@ -212,7 +212,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
       // 存储固定点坐标用于调整大小计算
       setOriginPos({ x: originX, y: originY });
     },
-    [size, position, componentConfig],
+    [size, position, componentData],
   );
 
   /**
@@ -220,20 +220,20 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
    */
   const updateComponentStyle = useCallback(
     (styles: Record<string, string>) => {
-      eventBus.emit('updateComponentStyle', componentConfig.id, styles);
+      eventBus.emit('updateComponentStyle', componentData.id, styles);
     },
-    [componentConfig.id],
+    [componentData.id],
   );
 
   const updateComponentProps = useCallback(
     (value: string | null) => {
       // 使用新的消息系统发送更新到主框架
-      sendMessageToParent('UPDATE_COMPONENT_PROPS', { content: value || '' }, componentConfig.id);
+      sendMessageToParent('UPDATE_COMPONENT_PROPS', { content: value || '' }, componentData.id);
 
       // 保持原有的事件总线以确保兼容性
-      eventBus.emit('updateComponentProps', componentConfig.id, { content: value || '' });
+      eventBus.emit('updateComponentProps', componentData.id, { content: value || '' });
     },
-    [componentConfig.id],
+    [componentData.id],
   );
 
   /**
@@ -266,9 +266,9 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         onMove?.(finalX, finalY);
         // Calculate component bounds for alignment
         const currentBounds = calculateComponentBounds({
-          ...componentConfig,
+          ...componentData,
           styleProps: {
-            ...componentConfig.styleProps,
+            ...componentData.styleProps,
             left: `${newX}px`,
             top: `${newY}px`,
           },
@@ -278,32 +278,25 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         let updatedAlignmentGuides: AlignmentGuide[] = [];
         if (currentBounds && componentTree) {
           const otherBounds = componentTree
-            .filter((comp) => comp.id !== componentConfig.id)
+            .filter((comp) => comp.id !== componentData.id)
             .map((comp) => calculateComponentBounds(comp))
             .filter(Boolean) as ComponentBounds[];
 
           updatedAlignmentGuides = calculateAlignmentGuides(currentBounds, otherBounds, DEFAULT_GRID_CONFIG.snapThreshold);
 
-          // 检查是否有重叠的具有 hasSlot 属性的组件
+          // 检查是否有重叠的具有 isContainer 属性的组件
           const overlappingComponents = findOverlappingComponents(currentBounds, otherBounds);
           const slotComponents = overlappingComponents.filter((comp) => {
             const component = componentTree.find((c) => c.id === comp.id);
-            return component?.compProps?.hasSlot;;
+            return component?.config?.isContainer;
           });
 
           // 设置重叠的 slot 组件状态
           if (slotComponents.length > 0) {
             // 获取第一个重叠的 slot 组件
             const overlappingComponent = componentTree.find((c) => c.id === slotComponents[0].id);
-            console.log('overlappingComponent', overlappingComponent);
             setOverlappingSlotComponent(overlappingComponent || null);
           } else {
-            console.log('overlappingComponents', overlappingComponents);
-            const comp = overlappingComponents[0];
-            if (comp) {
-              console.log(componentTree.find((c) => c.id === comp.id));
-            }
-
             setOverlappingSlotComponent(null);
           }
         }
@@ -318,7 +311,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         let newHeight = Math.max(MIN_DIMENSIONS.height, Math.abs(e.clientY - originY));
 
         // 如果是文本组件，则保持等比缩放
-        if (componentConfig.compName === 'Text') {
+        if (componentData.config?.compName === 'Text') {
           // 获取原始尺寸
           const originalWidth = size.width;
           const originalHeight = size.height;
@@ -393,7 +386,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         onResize?.(newWidth, newHeight);
       }
     },
-    [isDragging, isResizing, startPos, onMove, componentConfig, componentTree, originPos, position, resizeDirection, onResize, size],
+    [isDragging, isResizing, startPos, onMove, componentData, componentTree, originPos, position, resizeDirection, onResize, size],
   );
 
   /**
@@ -412,7 +405,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
       };
 
       // 如果是文本组件，根据缩放比例调整字体大小
-      if (componentConfig.compName === 'Text' && originalSize.width > 0) {
+      if (componentData.config?.compName === 'Text' && originalSize.width > 0) {
         // 计算缩放比例
         const scaleFactor = size.width / originalSize.width;
 
@@ -437,7 +430,8 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         // 向父窗口发送添加子组件的消息
         sendMessageToParent('ADD_CHILD_COMPONENT', {
           parentComponentId: overlappingSlotComponent.id,
-          componentType: componentConfig.compName,
+          componentId: componentData.id,
+          componentType: componentData.config?.compName,
         });
       }
     }
@@ -451,9 +445,9 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
     onResizeComplete,
     size.width,
     size.height,
-    position.x,
-    position.y,
-    componentConfig.compName,
+    position,
+    componentData.config?.compName,
+    componentData.id,
     originalSize.width,
     originalSize.fontSize,
     updateComponentStyle,
@@ -479,7 +473,6 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
 
   const handleBlur = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
-      console.log('handleBlur', e.target.childNodes[0].textContent);
       setIsEditing(false);
       updateComponentProps(e.target.childNodes[0].textContent);
     },
@@ -491,8 +484,8 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   }, [alignmentGuides, onAlignmentGuidesChange]);
 
   const stylePosition = useMemo(() => {
-    return componentConfig.styleProps?.position || 'static';
-  }, [componentConfig.styleProps]);
+    return componentData.styleProps?.position || 'static';
+  }, [componentData.styleProps]);
 
   // 处理拖拽放置事件
   const handleDrop = (e: React.DragEvent) => {
@@ -500,13 +493,13 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
     e.stopPropagation();
     setIsDragOver(false);
 
-    // 只有当组件具有 hasSlot 属性为 true 时才处理拖入
-    if (componentConfig.hasSlot) {
+    // 只有当组件具有 isContainer 属性为 true 时才处理拖入
+    if (componentData.config?.isContainer) {
       const componentType = e.dataTransfer.getData('componentType');
       if (componentType) {
         // 向父窗口发送添加子组件的消息
         sendMessageToParent('ADD_CHILD_COMPONENT', {
-          parentComponentId: componentConfig.id,
+          parentComponentId: componentData.id,
           componentType,
         });
       }
@@ -517,8 +510,8 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
     e.preventDefault();
     e.stopPropagation();
 
-    // 只有当组件具有 hasSlot 属性为 true 时才允许拖入
-    if (componentConfig.hasSlot) {
+    // 只有当组件具有 isContainer 属性为 true 时才允许拖入
+    if (componentData.config?.isContainer) {
       e.dataTransfer.dropEffect = 'copy';
       setIsDragOver(true);
     } else {
@@ -539,12 +532,12 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         suppressContentEditableWarning={true}
         onBlur={handleBlur}
         ref={wrapperRef}
-        id={`wrapper-${componentConfig.id}`}
+        id={`wrapper-${componentData.id}`}
         className={`resizable-wrapper ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''} ${isSelected ? 'selected' : ''} ${
           isDragOver ? 'drag-over' : ''
         } ${overlappingSlotComponent ? 'overlapping-slot' : ''}`}
         style={{
-          ...componentConfig.styleProps,
+          ...componentData.styleProps,
           width: `${size.width + (isSelected ? 4 : 2)}px`,
           height: `${size.height + (isSelected ? 4 : 2)}px`,
           left: `${position.x}px`,

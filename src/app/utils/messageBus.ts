@@ -1,5 +1,5 @@
 // 消息总线系统，用于处理主框架和画布iframe之间的通信
-export type MessageType = 
+export type MessageType =
   | 'UPDATE_COMPONENT_TREE'
   | 'UPDATE_COMPONENT_PROPS'
   | 'UPDATE_COMPONENT_STYLE'
@@ -11,6 +11,7 @@ export type MessageType =
 export interface AddChildComponentData {
   parentComponentId: number;
   componentType: string;
+  componentId: number;
 }
 
 import type { ComponentConfig } from '../common/types';
@@ -30,9 +31,9 @@ export interface MessagePayload {
 
 // 主框架向画布发送消息
 export const sendMessageToCanvas = (
-  type: MessageType, 
-  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData, 
-  componentId?: number
+  type: MessageType,
+  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData,
+  componentId?: number,
 ) => {
   const iframe = document.querySelector<HTMLIFrameElement>('iframe[src="/canvas"]');
   if (iframe?.contentWindow) {
@@ -40,7 +41,7 @@ export const sendMessageToCanvas = (
       type,
       data,
       componentId,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
     iframe.contentWindow.postMessage(payload, '*');
   }
@@ -48,16 +49,16 @@ export const sendMessageToCanvas = (
 
 // 画布向主框架发送消息
 export const sendMessageToParent = (
-  type: MessageType, 
-  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData, 
-  componentId?: number
+  type: MessageType,
+  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData,
+  componentId?: number,
 ) => {
   if (window.parent) {
     const payload: MessagePayload = {
       type,
       data,
       componentId,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
     window.parent.postMessage(payload, '*');
   }
@@ -70,7 +71,7 @@ export const listenToCanvasMessages = (callback: (payload: MessagePayload) => vo
       callback(event.data as MessagePayload);
     }
   };
-  
+
   window.addEventListener('message', handler);
   return () => window.removeEventListener('message', handler);
 };
@@ -82,7 +83,7 @@ export const listenToParentMessages = (callback: (payload: MessagePayload) => vo
       callback(event.data as MessagePayload);
     }
   };
-  
+
   window.addEventListener('message', handler);
   return () => window.removeEventListener('message', handler);
 };

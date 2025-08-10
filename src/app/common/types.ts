@@ -10,22 +10,33 @@ export interface PropConfig {
   max?: number; // 用于 number 类型
 }
 
-export type ComponentConfig = {
-  id?: number | undefined;
-  compName: string;
-  domType?: string | undefined;
+export type ComponentData = {
+  id?: number;
+  parentId?: number | null;
   styleProps?: React.CSSProperties | undefined;
   compProps?: {
     [key: string]: number | number[] | string | string[] | undefined | boolean;
   };
-  parentId?: number | null;
   children?: Array<number> | undefined;
-  hasSlot?: boolean;
-  compType?: React.FC<ComponentConfig>;
   config?: {
     name: string;
-    compProps: PropConfig[];
+    compName: string;
+    isEditable?: boolean;
+    isContainer?: boolean;
   };
+};
+
+export type ComponentConfig = {
+  config: {
+    name: string;
+    compProps: PropConfig[];
+    isEditable?: boolean;
+    isContainer?: boolean;
+    compName: string;
+    domType?: string | undefined;
+    compType?: React.FC<ComponentData>;
+  };
+  defaultProps?: ComponentData;
 };
 
 export type PropType = 'string' | 'number' | 'color' | 'select' | 'switch' | 'image' | 'boolean';
