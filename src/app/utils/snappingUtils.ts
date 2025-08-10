@@ -43,32 +43,23 @@ export const DEFAULT_GRID_CONFIG: GridConfig = {
   snapThreshold: 5,
 };
 
+export type CompRect = {
+  id: number;
+  rect: DOMRect;
+  clientTop: number;
+  clientLeft: number;
+};
+
 /**
  * Calculate component bounds from component config
  */
-export function calculateComponentBounds(component: ComponentData): ComponentBounds | null {
-  if (!component.styleProps) return null;
-
-  const x = parseInt(component.styleProps.left as string) || 0;
-  const y = parseInt(component.styleProps.top as string) || 0;
-  const width = parseInt(component.styleProps.width as string) || 0;
-  const height = parseInt(component.styleProps.height as string) || 0;
-
-  return {
-    id: component.id || -1,
-    x,
-    y,
-    width,
-    height,
-    edges: {
-      left: x,
-      center: x + width / 2,
-      right: x + width,
-      top: y,
-      middle: y + height / 2,
-      bottom: y + height,
-    },
-  };
+export function getComponentRect(component: ComponentData): CompRect | null {
+  const el = document.getElementById(`wrapper-${component.id}`);
+  if (!el) {
+    return null;
+  }
+  const rect = el.getBoundingClientRect();
+  return { id: component.id!, rect, clientTop: el.clientTop, clientLeft: el.clientLeft };
 }
 
 /**
@@ -88,59 +79,60 @@ export function shouldSnapToGrid(position: number, gridPosition: number, thresho
 /**
  * Calculate alignment guides for a dragging component
  */
-export function calculateAlignmentGuides(draggingBounds: ComponentBounds, otherComponents: ComponentBounds[], threshold: number): AlignmentGuide[] {
+export function calculateAlignmentGuides(draggingBounds: CompRect, otherComponents: CompRect[], threshold: number): AlignmentGuide[] {
   const guides: AlignmentGuide[] = [];
-
+  const getCenter = (rect: DOMRect) => rect.left + rect.width / 2;
+  const getMiddle = (rect: DOMRect) => rect.top + rect.height / 2;
   // Check alignment with other components
   otherComponents.forEach((component) => {
     if (component.id === draggingBounds.id) return;
 
     // Vertical alignments (left, center, right)
-    if (Math.abs(draggingBounds.edges.left - component.edges.left) <= threshold) {
+    if (Math.abs(draggingBounds.rect.left - component.rect.left) <= threshold) {
       guides.push({
         type: 'vertical',
-        position: component.edges.left,
+        position: component.rect.left,
         sourceComponentId: component.id,
       });
     }
 
-    if (Math.abs(draggingBounds.edges.center - component.edges.center) <= threshold) {
+    if (Math.abs(getCenter(draggingBounds.rect) - getCenter(component.rect)) <= threshold) {
       guides.push({
         type: 'vertical',
-        position: component.edges.center,
+        position: getCenter(component.rect),
         sourceComponentId: component.id,
       });
     }
 
-    if (Math.abs(draggingBounds.edges.right - component.edges.right) <= threshold) {
+    if (Math.abs(draggingBounds.rect.right - component.rect.right) <= threshold) {
       guides.push({
         type: 'vertical',
-        position: component.edges.right,
+        position: component.rect.right,
         sourceComponentId: component.id,
       });
     }
 
     // Horizontal alignments (top, middle, bottom)
-    if (Math.abs(draggingBounds.edges.top - component.edges.top) <= threshold) {
+    if (Math.abs(draggingBounds.rect.top - component.rect.top) <= threshold) {
       guides.push({
         type: 'horizontal',
-        position: component.edges.top,
+        position: component.rect.top,
         sourceComponentId: component.id,
       });
     }
 
-    if (Math.abs(draggingBounds.edges.middle - component.edges.middle) <= threshold) {
+    if (Math.abs(getMiddle(draggingBounds.rect) - getMiddle(component.rect)) <= threshold) {
       guides.push({
         type: 'horizontal',
-        position: component.edges.middle,
+        position: getMiddle(component.rect),
         sourceComponentId: component.id,
       });
     }
 
-    if (Math.abs(draggingBounds.edges.bottom - component.edges.bottom) <= threshold) {
+    if (Math.abs(draggingBounds.rect.bottom - component.rect.bottom) <= threshold) {
       guides.push({
         type: 'horizontal',
-        position: component.edges.bottom,
+        position: component.rect.bottom,
         sourceComponentId: component.id,
       });
     }
@@ -209,19 +201,19 @@ export function calculateSnapPosition(position: number, bounds: ComponentBounds,
 /**
  * Check if two components overlap
  */
-export function checkComponentOverlap(component1: ComponentBounds, component2: ComponentBounds): boolean {
+export function checkComponentOverlap(component1: CompRect, component2: CompRect): boolean {
   return (
-    component1.x < component2.x + component2.width &&
-    component1.x + component1.width > component2.x &&
-    component1.y < component2.y + component2.height &&
-    component1.y + component1.height > component2.y
+    component1.rect.left < component2.rect.left + component2.rect.width &&
+    component1.rect.left + component1.rect.width > component2.rect.left &&
+    component1.rect.top < component2.rect.top + component2.rect.height &&
+    component1.rect.top + component1.rect.height > component2.rect.top
   );
 }
 
 /**
  * Find overlapping components
  */
-export function findOverlappingComponents(draggingComponent: ComponentBounds, components: ComponentBounds[]): ComponentBounds[] {
+export function findOverlappingComponents(draggingComponent: CompRect, components: CompRect[]): CompRect[] {
   return components.filter(
     (component) => component.id !== draggingComponent.id && component.id !== -1 && checkComponentOverlap(draggingComponent, component),
   );

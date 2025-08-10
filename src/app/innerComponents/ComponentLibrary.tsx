@@ -2,7 +2,7 @@
 
 import React from 'react';
 import * as Accordion from '@radix-ui/react-accordion';
-import { ChevronDownIcon, ImageIcon, TextIcon, LayoutIcon, ContainerIcon, DashboardIcon, GridIcon } from '@radix-ui/react-icons';
+import { ChevronDownIcon, ImageIcon, TextIcon, LayoutIcon, ContainerIcon, DashboardIcon } from '@radix-ui/react-icons';
 import useEditorStore from '../store/editorStore';
 
 const ComponentLibrary = () => {
@@ -64,7 +64,7 @@ const ComponentLibrary = () => {
           <Accordion.Content className="overflow-hidden text-sm data-[state=closed]:accordion-up data-[state=open]:accordion-down">
             <div
               className="flex items-center ml-2 p-2 mb-2 text-sm text-gray-700 rounded cursor-pointer hover:bg-gray-100"
-              onClick={() => console.log('添加容器组件')}
+              onClick={() => handleAddComponent('Wrap')}
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData('componentType', 'Wrap');
@@ -72,17 +72,6 @@ const ComponentLibrary = () => {
             >
               <ContainerIcon className="w-4 h-4" />
               <span className="ml-2">容器</span>
-            </div>
-            <div
-              className="flex items-center ml-2 p-2 text-sm text-gray-700 rounded cursor-pointer hover:bg-gray-100"
-              onClick={() => console.log('添加栅格组件')}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('componentType', 'Grid');
-              }}
-            >
-              <GridIcon className="w-4 h-4" />
-              <span className="ml-2">栅格</span>
             </div>
           </Accordion.Content>
         </Accordion.Item>

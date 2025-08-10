@@ -356,10 +356,11 @@ function Page() {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
-
+  const node = renderComponent(root);
+  // console.log(node);
   return (
     <div className="root bg-white relative" id="root" onDrop={handleDrop} onDragOver={handleDragOver}>
-      {renderComponent(root)}
+      {node}
       <AlignmentGuides guides={alignmentGuides} canvasWidth={900} canvasHeight={1600} />
     </div>
   );

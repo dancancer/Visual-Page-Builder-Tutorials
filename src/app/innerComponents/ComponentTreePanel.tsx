@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { ComponentConfig } from '../common/types';
+import { ComponentData } from '../common/types';
 import useEditorStore from '../store/editorStore';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './uiComponents/Tabs';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem } from './uiComponents/ContextMenu';
@@ -10,8 +10,8 @@ import ComponentLibrary from './ComponentLibrary';
 import { sendMessageToCanvas } from '../utils/messageBus';
 
 interface TreeNodeProps {
-  component: ComponentConfig;
-  componentTree: (ComponentConfig | undefined)[];
+  component: ComponentData;
+  componentTree: ComponentData[];
   level?: number;
   onDragStart: (e: React.DragEvent, componentId: number) => void;
   onDragOver: (e: React.DragEvent, componentId: number) => void;
@@ -33,7 +33,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = component.children && component.children.length > 0;
   const { selectedComponentId } = useEditorStore((state) => state);
-  
+
   const handleDelete = (e: Event) => {
     e.stopPropagation();
     onDeleteComponent(component.id!);
@@ -49,9 +49,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({
       <ContextMenu>
         <ContextMenuTrigger>
           <div
-            className={`flex items-center py-1 px-2 rounded cursor-pointer hover:bg-gray-100 ${
-              level > 0 ? 'ml-4' : ''
-            } ${selectedComponentId === component.id ? 'bg-blue-100 border-l-4 border-blue-500 pl-1' : ''}`}
+            className={`flex items-center py-1 px-2 rounded cursor-pointer hover:bg-gray-100 ${level > 0 ? 'ml-4' : ''} ${
+              selectedComponentId === component.id ? 'bg-blue-100 border-l-4 border-blue-500 pl-1' : ''
+            }`}
             style={{ paddingLeft: `${level * 16 + 8}px` }}
             draggable
             onDragStart={(e) => onDragStart(e, component.id!)}
@@ -72,20 +72,17 @@ const TreeNode: React.FC<TreeNodeProps> = ({
             )}
             {!hasChildren && <span className="mr-1 w-4 h-4"></span>}
             <span className="ml-1 text-sm">
-              {component.config?.name || component.compName} {component.id}
+              {component.config?.name || component.config?.compName} {component.id}
             </span>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className={editorStyles.dropdown.content}>
-          <ContextMenuItem
-            className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`}
-            onSelect={handleDelete}
-          >
+          <ContextMenuItem className={`${editorStyles.dropdown.item} ${editorStyles.text.primary}`} onSelect={handleDelete}>
             删除组件
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-      
+
       {hasChildren && isExpanded && (
         <div className="w-full">
           {component.children!.map((childId) => {
@@ -123,26 +120,35 @@ const ComponentTreePanel: React.FC = () => {
     e.preventDefault();
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent, targetComponentId: number) => {
-    e.preventDefault();
-    const draggedComponentId = parseInt(e.dataTransfer.getData('componentId'));
-    
-    // 防止组件拖拽到自己身上
-    if (draggedComponentId === targetComponentId) return;
-    
-    // 重新排序组件
-    reorderComponent(draggedComponentId, targetComponentId);
-  }, [reorderComponent]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent, targetComponentId: number) => {
+      e.preventDefault();
+      const draggedComponentId = parseInt(e.dataTransfer.getData('componentId'));
 
-  const handleSelectComponent = useCallback((componentId: number) => {
-    setSelectedComponentId(componentId);
-    // 通知画布选中组件
-    sendMessageToCanvas('SELECT_COMPONENT', {}, componentId);
-  }, [setSelectedComponentId]);
+      // 防止组件拖拽到自己身上
+      if (draggedComponentId === targetComponentId) return;
 
-  const handleDeleteComponent = useCallback((componentId: number) => {
-    removeComponent(componentId);
-  }, [removeComponent]);
+      // 重新排序组件
+      reorderComponent(draggedComponentId, targetComponentId);
+    },
+    [reorderComponent],
+  );
+
+  const handleSelectComponent = useCallback(
+    (componentId: number) => {
+      setSelectedComponentId(componentId);
+      // 通知画布选中组件
+      sendMessageToCanvas('SELECT_COMPONENT', {}, componentId);
+    },
+    [setSelectedComponentId],
+  );
+
+  const handleDeleteComponent = useCallback(
+    (componentId: number) => {
+      removeComponent(componentId);
+    },
+    [removeComponent],
+  );
 
   return (
     <div className={`${editorStyles.container.panel} ${editorStyles.text.primary}`}>

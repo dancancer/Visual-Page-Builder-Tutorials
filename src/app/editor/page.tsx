@@ -181,9 +181,6 @@ function Page() {
   ]);
 
   useEffect(() => {
-    // 发送更新到画布iframe
-    // iframeRef.current!.contentWindow!.postMessage({ name: 'update', componentTree, root }, '*');
-
     // 使用新的消息系统发送更新
     sendMessageToCanvas('UPDATE_COMPONENT_TREE', { componentTree, root });
   }, [root, componentTree]);
@@ -211,17 +208,6 @@ function Page() {
       </Head>
       <div className="navbar">顶部导航+工具栏</div>
       <div className="main-container">
-        {/* <div className="sidebar">
-          <div className="sidebar-header">
-            <h3 className={`${editorStyles.layout.header} ${editorStyles.text.primary}`}>组件库</h3>
-            <div className={editorStyles.layout.divider}></div>
-          </div>
-
-          <div className={editorStyles.layout.sidebar}>
-            <ComponentLibrary />
-          </div>
-        </div> */}
-
         <div className="properties">
           <ComponentTreePanel />
         </div>

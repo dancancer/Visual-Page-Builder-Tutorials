@@ -4,17 +4,17 @@ import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { ComponentData } from '../common/types';
 import './ResizableWrapper.css';
 import ErrorBoundary from './ErrorBoundary';
-import { eventBus } from '../utils/eventBus';
+// import { eventBus } from '../utils/eventBus';
 import { sendMessageToParent } from '../utils/messageBus';
 import {
   calculateGridSnap,
   shouldSnapToGrid,
-  calculateComponentBounds,
+  getComponentRect,
   calculateAlignmentGuides,
   findOverlappingComponents,
   DEFAULT_GRID_CONFIG,
   AlignmentGuide,
-  ComponentBounds,
+  CompRect,
 } from '../utils/snappingUtils';
 import { getTextComponentSize } from '../utils/textUtils';
 
@@ -133,7 +133,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
       // 检查是否有拖拽数据，如果有则可能是拖入操作
       const isDragFromLibrary = e.nativeEvent instanceof DragEvent && e.nativeEvent.dataTransfer?.types.includes('componentType');
 
-      if (isDragFromLibrary) {
+      if (isDragFromLibrary || componentData.styleProps?.position !== 'absolute') {
         // 如果是从组件库拖入的组件，阻止默认的拖拽行为
         e.preventDefault();
         return;
@@ -145,7 +145,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         y: e.clientY - position.y,
       });
     },
-    [position],
+    [componentData.styleProps?.position, position],
   );
 
   /**
@@ -220,7 +220,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
    */
   const updateComponentStyle = useCallback(
     (styles: Record<string, string>) => {
-      eventBus.emit('updateComponentStyle', componentData.id, styles);
+      sendMessageToParent('UPDATE_COMPONENT_STYLE', styles, componentData.id);
     },
     [componentData.id],
   );
@@ -229,9 +229,6 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
     (value: string | null) => {
       // 使用新的消息系统发送更新到主框架
       sendMessageToParent('UPDATE_COMPONENT_PROPS', { content: value || '' }, componentData.id);
-
-      // 保持原有的事件总线以确保兼容性
-      eventBus.emit('updateComponentProps', componentData.id, { content: value || '' });
     },
     [componentData.id],
   );
@@ -265,27 +262,21 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         setPosition({ x: finalX, y: finalY });
         onMove?.(finalX, finalY);
         // Calculate component bounds for alignment
-        const currentBounds = calculateComponentBounds({
-          ...componentData,
-          styleProps: {
-            ...componentData.styleProps,
-            left: `${newX}px`,
-            top: `${newY}px`,
-          },
-        });
+        const currentBounds = getComponentRect(componentData);
 
         // Calculate alignment guides with other components
         let updatedAlignmentGuides: AlignmentGuide[] = [];
-        if (currentBounds && componentTree) {
+        if (currentBounds && componentTree && componentData.styleProps?.position === 'absolute') {
           const otherBounds = componentTree
-            .filter((comp) => comp.id !== componentData.id)
-            .map((comp) => calculateComponentBounds(comp))
-            .filter(Boolean) as ComponentBounds[];
+            .filter((comp) => comp.id !== componentData.id && comp.id !== componentData.parentId)
+            .map((comp) => getComponentRect(comp)) as CompRect[];
 
           updatedAlignmentGuides = calculateAlignmentGuides(currentBounds, otherBounds, DEFAULT_GRID_CONFIG.snapThreshold);
 
           // 检查是否有重叠的具有 isContainer 属性的组件
           const overlappingComponents = findOverlappingComponents(currentBounds, otherBounds);
+          console.log('overlappingComponents', overlappingComponents);
+          console.log('otherBounds', otherBounds);
           const slotComponents = overlappingComponents.filter((comp) => {
             const component = componentTree.find((c) => c.id === comp.id);
             return component?.config?.isContainer;
@@ -424,15 +415,32 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         left: `${position.x}px`,
         top: `${position.y}px`,
       });
+      console.log('handleMouseUp', position);
 
       // 如果有重叠的 slot 组件，自动将当前组件添加为该 slot 组件的子组件
       if (overlappingSlotComponent) {
+        const compRect = getComponentRect(componentData);
+        const overlappingCompRect = getComponentRect(overlappingSlotComponent);
+
+        const newTop = (compRect?.rect.top || 0) - (overlappingCompRect?.rect.top || 0) - (overlappingCompRect?.clientTop || 0);
+        const newLeft = (compRect?.rect.left || 0) - (overlappingCompRect?.rect.left || 0) - (overlappingCompRect?.clientLeft || 0);
+        console.log('newTop', newTop);
+        console.log('newLeft', newLeft);
+        updateComponentStyle({
+          left: `${newLeft}px`,
+          top: `${newTop}px`,
+        });
         // 向父窗口发送添加子组件的消息
         sendMessageToParent('ADD_CHILD_COMPONENT', {
           parentComponentId: overlappingSlotComponent.id,
           componentId: componentData.id,
           componentType: componentData.config?.compName,
         });
+        setTimeout(() => {
+          // 2. 获取两个元素相对于视口的位置
+
+          setPosition({ x: newLeft, y: newTop });
+        }, 0);
       }
     }
     setIsDragging(false);
@@ -443,11 +451,9 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
     isResizing,
     isDragging,
     onResizeComplete,
-    size.width,
-    size.height,
+    size,
     position,
-    componentData.config?.compName,
-    componentData.id,
+    componentData,
     originalSize.width,
     originalSize.fontSize,
     updateComponentStyle,
@@ -466,17 +472,24 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
     }
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsEditing(true);
-  }, []);
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (componentData.config?.isEditable) {
+        e.stopPropagation();
+        setIsEditing(true);
+      }
+    },
+    [componentData],
+  );
 
   const handleBlur = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
-      setIsEditing(false);
-      updateComponentProps(e.target.childNodes[0].textContent);
+      if (componentData.config?.isEditable) {
+        setIsEditing(false);
+        updateComponentProps(e.target.childNodes[0].textContent);
+      }
     },
-    [updateComponentProps],
+    [componentData, updateComponentProps],
   );
 
   useEffect(() => {
@@ -528,7 +541,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   return (
     <ErrorBoundary>
       <div
-        contentEditable={isEditing}
+        contentEditable={isEditing && componentData.config?.isEditable}
         suppressContentEditableWarning={true}
         onBlur={handleBlur}
         ref={wrapperRef}
@@ -562,8 +575,8 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                width: '100%',
-                height: '100%',
+                width: `${size.width + (isSelected ? 4 : 2)}px`,
+                height: `${size.height + (isSelected ? 4 : 2)}px`,
                 cursor: 'move',
                 pointerEvents: 'all',
               }}

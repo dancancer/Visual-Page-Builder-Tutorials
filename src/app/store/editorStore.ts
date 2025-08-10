@@ -22,7 +22,11 @@ const useEditorStore = create<EditorStore>((set, get) => ({
   switch: false,
   root: {
     id: -1,
-    compName: 'Wrap',
+    config: {
+      compName: 'Wrap',
+      name: '容器',
+      isContainer: true,
+    },
     compProps: { fontSize: '32px', color: 'red' },
     parentId: null,
     children: [],
@@ -112,7 +116,7 @@ const useEditorStore = create<EditorStore>((set, get) => ({
 
     // 获取被拖拽的组件和目标组件
     const draggedComponent = newTree[draggedComponentId];
-    const targetComponent = newTree[targetComponentId];
+    const targetComponent = targetComponentId === root.id ? root : newTree[targetComponentId];
 
     if (!draggedComponent || !targetComponent) {
       return;
@@ -140,11 +144,16 @@ const useEditorStore = create<EditorStore>((set, get) => ({
       }
     }
 
-    // 将被拖拽的组件添加到目标组件的 children 中
-    newTree[targetComponentId] = {
-      ...targetComponent,
-      children: [...(targetComponent.children || []), draggedComponentId],
-    };
+    if (targetComponentId === root.id) {
+      root.children = [...(root.children || []), draggedComponentId];
+      set(() => ({ root: { ...root } }));
+    } else {
+      // 将被拖拽的组件添加到目标组件的 children 中
+      newTree[targetComponentId] = {
+        ...targetComponent,
+        children: [...(targetComponent.children || []), draggedComponentId],
+      };
+    }
 
     // 更新被拖拽组件的 parentId
     newTree[draggedComponentId] = {
