@@ -108,16 +108,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         setSize(recommendedSize);
       }
     }
-  }, [
-    componentConfig.compProps?.content,
-    componentConfig.styleProps?.content,
-    componentConfig.styleProps?.fontSize,
-    componentConfig.styleProps?.fontFamily,
-    componentConfig.styleProps?.fontWeight,
-    componentConfig.styleProps?.fontStyle,
-    componentConfig.styleProps?.textDecoration,
-    componentConfig.styleProps?.textTransform,
-  ]);
+  }, [componentConfig]);
 
   // 交互状态
   const [isDragging, setIsDragging] = useState(false);

@@ -11,15 +11,13 @@ interface ContextMenuProps {
   modal?: boolean;
 }
 
-const ContextMenu = React.forwardRef<HTMLDivElement, ContextMenuProps>(
-  ({ children, ...props }, forwardedRef) => {
-    return (
-      <RadixContextMenu.Root {...props} ref={forwardedRef}>
-        {children}
-      </RadixContextMenu.Root>
-    );
-  },
-);
+const ContextMenu = ({ children, ...props }: ContextMenuProps) => {
+  return (
+    <RadixContextMenu.Root {...props}>
+      {children}
+    </RadixContextMenu.Root>
+  );
+};
 
 ContextMenu.displayName = 'ContextMenu';
 

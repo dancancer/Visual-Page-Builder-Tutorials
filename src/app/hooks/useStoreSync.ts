@@ -2,6 +2,7 @@
 import { useEffect, useCallback } from 'react';
 import { sendMessageToCanvas, listenToCanvasMessages, MessagePayload } from '../utils/messageBus';
 import useEditorStore from '../store/editorStore';
+import type { ComponentConfig } from '../common/types';
 
 export const useStoreSync = () => {
   const { componentTree, root, updateComponentProps, updateComponentStyleProps, setSelectedComponentId } = useEditorStore();
@@ -12,13 +13,17 @@ export const useStoreSync = () => {
   }, [componentTree, root]);
 
   // 发送组件属性更新到画布
-  const syncComponentPropsToCanvas = useCallback((componentId: number, props: any) => {
-    sendMessageToCanvas('UPDATE_COMPONENT_PROPS', props, componentId);
+  const syncComponentPropsToCanvas = useCallback((componentId: number, props: ComponentConfig['compProps']) => {
+    if (props) {
+      sendMessageToCanvas('UPDATE_COMPONENT_PROPS', props as Record<string, unknown>, componentId);
+    }
   }, []);
 
   // 发送组件样式更新到画布
-  const syncComponentStyleToCanvas = useCallback((componentId: number, style: any) => {
-    sendMessageToCanvas('UPDATE_COMPONENT_STYLE', style, componentId);
+  const syncComponentStyleToCanvas = useCallback((componentId: number, style: ComponentConfig['styleProps']) => {
+    if (style) {
+      sendMessageToCanvas('UPDATE_COMPONENT_STYLE', style as Record<string, unknown>, componentId);
+    }
   }, []);
 
   // 发送组件选择更新到画布
@@ -32,12 +37,12 @@ export const useStoreSync = () => {
       switch (payload.type) {
         case 'UPDATE_COMPONENT_PROPS':
           if (payload.componentId !== undefined && payload.componentId >= 0) {
-            updateComponentProps(payload.componentId, payload.data);
+            updateComponentProps(payload.componentId, payload.data as ComponentConfig['compProps']);
           }
           break;
         case 'UPDATE_COMPONENT_STYLE':
           if (payload.componentId !== undefined && payload.componentId >= 0) {
-            updateComponentStyleProps(payload.componentId, payload.data);
+            updateComponentStyleProps(payload.componentId, payload.data as ComponentConfig['styleProps']);
           }
           break;
         case 'SELECT_COMPONENT':

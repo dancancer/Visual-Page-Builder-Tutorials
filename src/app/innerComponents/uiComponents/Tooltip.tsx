@@ -24,15 +24,13 @@ interface TooltipProps {
   delayDuration?: number;
 }
 
-const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(
-  ({ children, ...props }, forwardedRef) => {
-    return (
-      <RadixTooltip.Root {...props} ref={forwardedRef}>
-        {children}
-      </RadixTooltip.Root>
-    );
-  },
-);
+const Tooltip = ({ children, ...props }: TooltipProps) => {
+  return (
+    <RadixTooltip.Root {...props}>
+      {children}
+    </RadixTooltip.Root>
+  );
+};
 
 Tooltip.displayName = 'Tooltip';
 

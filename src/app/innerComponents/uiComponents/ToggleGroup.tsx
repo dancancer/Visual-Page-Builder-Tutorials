@@ -4,24 +4,65 @@ import * as React from 'react';
 import * as RadixToggleGroup from '@radix-ui/react-toggle-group';
 import './toggleGroup.css';
 
-interface ToggleGroupProps {
-  type: 'single' | 'multiple';
-  value?: string | string[];
-  onValueChange?: (value: string | string[]) => void;
+type ToggleGroupSingleProps = {
+  type: 'single';
+  value?: string;
+  onValueChange?: (value: string) => void;
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
   rovingFocus?: boolean;
   orientation?: 'horizontal' | 'vertical';
-}
+};
 
-const ToggleGroup = React.forwardRef<HTMLDivElement, ToggleGroupProps>(({ children, className, ...props }, forwardedRef) => {
-  return (
-    <RadixToggleGroup.Root {...props} ref={forwardedRef} className={className || 'ToggleGroup'}>
-      {children}
-    </RadixToggleGroup.Root>
-  );
-});
+type ToggleGroupMultipleProps = {
+  type: 'multiple';
+  value?: string[];
+  onValueChange?: (value: string[]) => void;
+  children: React.ReactNode;
+  className?: string;
+  disabled?: boolean;
+  rovingFocus?: boolean;
+  orientation?: 'horizontal' | 'vertical';
+};
+
+type ToggleGroupProps = ToggleGroupSingleProps | ToggleGroupMultipleProps;
+
+const ToggleGroup = (props: ToggleGroupProps) => {
+  const { children, className, type, ...restProps } = props;
+  
+  if (type === 'single') {
+    const { value, onValueChange, disabled, rovingFocus, orientation } = restProps as ToggleGroupSingleProps;
+    return (
+      <RadixToggleGroup.Root 
+        type="single" 
+        value={value}
+        onValueChange={onValueChange}
+        disabled={disabled}
+        rovingFocus={rovingFocus}
+        orientation={orientation}
+        className={className || 'ToggleGroup'}
+      >
+        {children}
+      </RadixToggleGroup.Root>
+    );
+  } else {
+    const { value, onValueChange, disabled, rovingFocus, orientation } = restProps as ToggleGroupMultipleProps;
+    return (
+      <RadixToggleGroup.Root 
+        type="multiple" 
+        value={value}
+        onValueChange={onValueChange}
+        disabled={disabled}
+        rovingFocus={rovingFocus}
+        orientation={orientation}
+        className={className || 'ToggleGroup'}
+      >
+        {children}
+      </RadixToggleGroup.Root>
+    );
+  }
+};
 
 ToggleGroup.displayName = 'ToggleGroup';
 

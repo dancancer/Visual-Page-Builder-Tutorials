@@ -32,8 +32,9 @@ const FontSizeInput: React.FC<FontSizeInputProps> = ({ value = '16px', onChange 
     }
   };
 
-  const handleUnitChange = (newUnit: FontSizeUnit) => {
-    onChange?.(newUnit === 'px' ? numValue : `${numValue}${newUnit}`);
+  const handleUnitChange = (newUnit: string) => {
+    const unit = newUnit as FontSizeUnit;
+    onChange?.(unit === 'px' ? numValue : `${numValue}${unit}`);
   };
 
   return (

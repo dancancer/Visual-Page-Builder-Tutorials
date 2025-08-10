@@ -8,7 +8,7 @@ import useEditorStore from '../store/editorStore';
 import ResizableWrapper from './ResizableWrapper';
 import AlignmentGuides from './AlignmentGuides';
 import { eventBus } from '../utils/eventBus';
-import { listenToParentMessages, MessagePayload, MessageType } from '../utils/messageBus';
+import { listenToParentMessages, MessagePayload } from '../utils/messageBus';
 
 // 可用组件列表
 const components: ComponentConfig[] = [TextComp, PicComp, WrapComp];
@@ -18,7 +18,7 @@ function Page() {
   const [compTree, setCompTree] = React.useState<ComponentConfig[]>([]);
   const [root, setRoot] = React.useState<ComponentConfig | undefined>(undefined);
   const [selectedComponent, setSelectedComponent] = React.useState<ComponentConfig | null>(null);
-  const [alignmentGuides, setAlignmentGuides] = React.useState<any[]>([]);
+  const [alignmentGuides, setAlignmentGuides] = React.useState<{ type: 'vertical' | 'horizontal'; position: number; sourceComponentId?: number }[]>([]);
   const { setSelectedComponentId, addComponentType } = useEditorStore();
 
   /**
@@ -189,18 +189,20 @@ function Page() {
     const handleParentMessage = (payload: MessagePayload) => {
       switch (payload.type) {
         case 'UPDATE_COMPONENT_TREE':
-          if (payload.data.componentTree) {
-            setCompTree(payload.data.componentTree);
-            setRoot(payload.data.root);
+          // Type guard to check if payload.data is UpdateComponentTreeData
+          if ('componentTree' in payload.data && 'root' in payload.data) {
+            const data = payload.data as { componentTree: ComponentConfig[]; root: ComponentConfig };
+            setCompTree(data.componentTree);
+            setRoot(data.root);
           }
           break;
         case 'UPDATE_COMPONENT_PROPS':
           // 处理组件属性更新
-          handleComponentPropsUpdate(payload.componentId || -1, payload.data);
+          handleComponentPropsUpdate(payload.componentId || -1, payload.data as Record<string, number | number[] | string | string[] | undefined>);
           break;
         case 'UPDATE_COMPONENT_STYLE':
           // 处理组件样式更新
-          handleComponentStyleUpdate(payload.componentId || -1, payload.data);
+          handleComponentStyleUpdate(payload.componentId || -1, payload.data as Record<string, string>);
           break;
         case 'SELECT_COMPONENT':
           // 处理组件选择
@@ -213,7 +215,9 @@ function Page() {
           break;
         case 'ADD_CHILD_COMPONENT':
           // 处理添加子组件
-          if (payload.data && payload.data.parentComponentId !== undefined && payload.data.componentType) {
+          // Type guard to check if payload.data is AddChildComponentData
+          if ('parentComponentId' in payload.data && 'componentType' in payload.data && 
+              payload.data.parentComponentId !== undefined && payload.data.componentType) {
             // 向父窗口发送添加子组件的消息
             window.parent.postMessage(
               {

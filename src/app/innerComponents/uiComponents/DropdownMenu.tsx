@@ -11,15 +11,13 @@ interface DropdownMenuProps {
   modal?: boolean;
 }
 
-const DropdownMenu = React.forwardRef<HTMLDivElement, DropdownMenuProps>(
-  ({ children, ...props }, forwardedRef) => {
-    return (
-      <RadixDropdownMenu.Root {...props} ref={forwardedRef}>
-        {children}
-      </RadixDropdownMenu.Root>
-    );
-  },
-);
+const DropdownMenu = ({ children, ...props }: DropdownMenuProps) => {
+  return (
+    <RadixDropdownMenu.Root {...props}>
+      {children}
+    </RadixDropdownMenu.Root>
+  );
+};
 
 DropdownMenu.displayName = 'DropdownMenu';
 

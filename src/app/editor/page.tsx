@@ -10,13 +10,9 @@ import { ComponentConfig } from '../common/types';
 import { PicComp, WrapComp } from '../components';
 import { eventBus } from '../utils/eventBus';
 import Head from 'next/head';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../innerComponents/uiComponents/Tooltip';
-import { ImageIcon, TextIcon, LayoutIcon, ContainerIcon, DashboardIcon, GridIcon } from '@radix-ui/react-icons';
-import { sendMessageToCanvas, listenToCanvasMessages, MessagePayload } from '../utils/messageBus';
-import { editorStyles } from '../styles/editorStyles';
+import { sendMessageToCanvas, listenToCanvasMessages, MessagePayload, AddChildComponentData } from '../utils/messageBus';
 import ZoomControl from '../innerComponents/ZoomControl';
 import TextToolbar from '../innerComponents/TextToolbar';
-import ComponentLibrary from '../innerComponents/ComponentLibrary';
 
 const components: ComponentConfig[] = [TextComp, PicComp, WrapComp];
 
@@ -71,9 +67,19 @@ function Page() {
     [zoomRatio],
   );
 
+  // 添加一个处理组件添加的公共函数
+  const handleAddComponent = useCallback(
+    (compName: string) => {
+      addComponent({
+        compName,
+      });
+    },
+    [addComponent],
+  );
+
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const { type, direction, component, componentId, styleUpdates, propUpdates, componentType, position } = event.data;
+      const { type, direction, component, componentId, styleUpdates, propUpdates, componentType } = event.data;
 
       if (type === 'zoom' && direction) {
         zoom(direction);
@@ -111,7 +117,7 @@ function Page() {
               console.error(`Component with id ${payload.componentId} not found in componentTree`);
               return;
             }
-            updateComponentProps(payload.componentId, payload.data);
+            updateComponentProps(payload.componentId, payload.data as ComponentConfig['compProps']);
           }
           break;
         case 'UPDATE_COMPONENT_STYLE':
@@ -122,16 +128,18 @@ function Page() {
               console.error(`Component with id ${payload.componentId} not found in componentTree`);
               return;
             }
-            updateComponentStyleProps(payload.componentId, payload.data);
+            updateComponentStyleProps(payload.componentId, payload.data as ComponentConfig['styleProps']);
           }
           break;
         case 'ADD_CHILD_COMPONENT':
           // 处理从画布传来的添加子组件请求
-          if (payload.data && payload.data.parentComponentId !== undefined && payload.data.componentType) {
+          // Type guard to check if payload.data is AddChildComponentData
+          if ('parentComponentId' in payload.data && 'componentType' in payload.data && 
+              payload.data.parentComponentId !== undefined && payload.data.componentType) {
             // 创建新的子组件
-            const newComponent = {
-              compName: payload.data.componentType,
-              parentId: payload.data.parentComponentId,
+            const newComponent: ComponentConfig = {
+              compName: (payload.data as AddChildComponentData).componentType,
+              parentId: (payload.data as AddChildComponentData).parentComponentId,
             };
 
             // 添加组件到指定的父组件
@@ -161,7 +169,7 @@ function Page() {
       window.removeEventListener('message', handleMessage);
       unsubscribe();
     };
-  }, [zoom, setSelectedComponentId, componentTree, updateComponentStyleProps, updateComponentProps]);
+  }, [zoom, setSelectedComponentId, componentTree, updateComponentStyleProps, updateComponentProps, addComponent, handleAddComponent]);
 
   useEffect(() => {
     // 发送更新到画布iframe
@@ -171,17 +179,7 @@ function Page() {
     sendMessageToCanvas('UPDATE_COMPONENT_TREE', { componentTree, root });
   }, [root, componentTree]);
 
-  // 添加一个处理组件添加的公共函数
-  const handleAddComponent = useCallback(
-    (compName: string) => {
-      addComponent({
-        compName,
-      });
-    },
-    [addComponent],
-  );
-
-  const onUpdateStyle = useCallback((styleUpdates) => {
+  const onUpdateStyle = useCallback((styleUpdates: Record<string, string>) => {
     const state = useEditorStore.getState();
     if (state.selectedComponentId !== null && state.selectedComponentId >= 0) {
       const component = state.componentTree[state.selectedComponentId];

@@ -686,7 +686,12 @@ const PropertyPanel: React.FC = () => {
       }
       return null;
     })
-    .filter(Boolean) as typeof applicableCategoriesItems;
+    .filter(Boolean) as Array<{
+      key: string;
+      label: string;
+      icon: React.ReactNode;
+      children: React.ReactNode;
+    }>;
 
   return (
     <div className={`${editorStyles.container.panel} ${editorStyles.text.primary}`}>
@@ -757,10 +762,12 @@ const PropertyPanel: React.FC = () => {
               <button
                 className={`${editorStyles.form.button} ${editorStyles.form.buttonSecondary}`}
                 onClick={() => {
-                  syncComponentProps(selectedComponentId, {
-                    ...component?.compProps,
-                    style: {},
-                  });
+                  // Create a copy of compProps without the style property
+                  const compProps = component?.compProps || {};
+                  const restProps = Object.fromEntries(
+                    Object.entries(compProps).filter(([key]) => key !== 'style')
+                  );
+                  syncComponentProps(selectedComponentId, restProps);
                 }}
               >
                 清空样式

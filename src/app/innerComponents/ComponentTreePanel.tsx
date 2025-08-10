@@ -34,7 +34,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   const hasChildren = component.children && component.children.length > 0;
   const { selectedComponentId } = useEditorStore((state) => state);
   
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = (e: Event) => {
     e.stopPropagation();
     onDeleteComponent(component.id!);
   };
@@ -119,7 +119,7 @@ const ComponentTreePanel: React.FC = () => {
     e.dataTransfer.setData('componentId', componentId.toString());
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent, componentId: number) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
   }, []);
 

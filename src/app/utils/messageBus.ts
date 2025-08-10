@@ -8,15 +8,32 @@ export type MessageType =
   | 'ZOOM_CANVAS'
   | 'CANVAS_READY';
 
+export interface AddChildComponentData {
+  parentComponentId: number;
+  componentType: string;
+}
+
+import type { ComponentConfig } from '../common/types';
+import React from 'react';
+
+interface UpdateComponentTreeData {
+  componentTree: ComponentConfig[];
+  root: ComponentConfig;
+}
+
 export interface MessagePayload {
   type: MessageType;
-  data: any;
+  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData | React.CSSProperties;
   componentId?: number;
   timestamp: number;
 }
 
 // 主框架向画布发送消息
-export const sendMessageToCanvas = (type: MessageType, data: any, componentId?: number) => {
+export const sendMessageToCanvas = (
+  type: MessageType, 
+  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData, 
+  componentId?: number
+) => {
   const iframe = document.querySelector<HTMLIFrameElement>('iframe[src="/canvas"]');
   if (iframe?.contentWindow) {
     const payload: MessagePayload = {
@@ -30,7 +47,11 @@ export const sendMessageToCanvas = (type: MessageType, data: any, componentId?: 
 };
 
 // 画布向主框架发送消息
-export const sendMessageToParent = (type: MessageType, data: any, componentId?: number) => {
+export const sendMessageToParent = (
+  type: MessageType, 
+  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData, 
+  componentId?: number
+) => {
   if (window.parent) {
     const payload: MessagePayload = {
       type,

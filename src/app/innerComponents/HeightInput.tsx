@@ -41,11 +41,12 @@ const HeightInput: React.FC<HeightInputProps> = ({ value = '100px', onChange }) 
     }
   };
 
-  const handleUnitChange = (newUnit: HeightUnit) => {
-    if (['auto', 'max-content', 'min-content', 'fit-content'].includes(newUnit)) {
-      onChange?.(newUnit);
+  const handleUnitChange = (newUnit: string) => {
+    const unit = newUnit as HeightUnit;
+    if (['auto', 'max-content', 'min-content', 'fit-content'].includes(unit)) {
+      onChange?.(unit);
     } else {
-      onChange?.(newUnit === 'px' ? numValue : `${numValue}${newUnit}`);
+      onChange?.(unit === 'px' ? numValue : `${numValue}${unit}`);
     }
   };
 

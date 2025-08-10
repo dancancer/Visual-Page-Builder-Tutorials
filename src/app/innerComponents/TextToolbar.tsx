@@ -23,8 +23,11 @@ interface TextToolbarProps {
 
 const TextToolbar: React.FC<TextToolbarProps> = ({ onUpdateStyle }) => {
   // Use separate selectors to avoid unnecessary re-renders
-  const selectedComponent = useEditorStore((state) => state.selectedComponent);
-  // const componentTree = useEditorStore((state) => state.componentTree);
+  const selectedComponentId = useEditorStore((state) => state.selectedComponentId);
+  const componentTree = useEditorStore((state) => state.componentTree);
+  
+  // Get the actual selected component from the component tree
+  const selectedComponent = selectedComponentId !== null ? componentTree[selectedComponentId] : null;
 
   const [isVisible, setIsVisible] = useState(false);
   const [currentStyles, setCurrentStyles] = useState<React.CSSProperties>({});
@@ -48,7 +51,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ onUpdateStyle }) => {
       setHasUnderline(false);
       setHasStrikethrough(false);
     }
-  }, [selectedComponent]);
+  }, [selectedComponent, selectedComponentId]);
 
   // 更新文本装饰（下划线和删除线可以共存）
   useEffect(() => {

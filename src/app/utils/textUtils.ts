@@ -9,16 +9,16 @@ export function calculateTextDimensions(text: string, styleProps: React.CSSPrope
 
   // 设置样式以匹配文本组件的样式
   if (styleProps.fontSize) {
-    offscreenElement.style.fontSize = styleProps.fontSize;
+    offscreenElement.style.fontSize = String(styleProps.fontSize);
   }
   if (styleProps.fontWeight) {
-    offscreenElement.style.fontWeight = styleProps.fontWeight;
+    offscreenElement.style.fontWeight = String(styleProps.fontWeight);
   }
   if (styleProps.fontFamily) {
-    offscreenElement.style.fontFamily = styleProps.fontFamily;
+    offscreenElement.style.fontFamily = String(styleProps.fontFamily);
   }
   if (styleProps.lineHeight) {
-    offscreenElement.style.lineHeight = styleProps.lineHeight;
+    offscreenElement.style.lineHeight = String(styleProps.lineHeight);
   }
   offscreenElement.style.position = 'absolute';
   offscreenElement.style.left = '-9999px';
