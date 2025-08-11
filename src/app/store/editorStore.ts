@@ -18,6 +18,8 @@ interface EditorStore {
   updateComponentProps: (id: number, newProps: ComponentData['compProps']) => void;
   updateComponentStyleProps: (id: number, newProps: ComponentData['styleProps']) => void;
   addComponentType: (componentType: ComponentConfig) => void; // 新增：添加组件类型的方法
+  zoom: number;
+  setZoom: (zoom: number) => void;
 }
 
 const fetchFontData = async (fontName: string, text: string) => {
@@ -27,7 +29,6 @@ const fetchFontData = async (fontName: string, text: string) => {
   try {
     const response = await fetch(`/api/font?fontName=${fontName}&text=${text}`);
     const result = await response.json();
-    console.log('----------------', result);
     return result.data;
   } catch (error) {
     console.error('Failed to fetch font subset:', error);
@@ -67,6 +68,8 @@ const useEditorStore = create<EditorStore>((set, get) => ({
   selectedComponentId: null,
   selectedComponent: null,
   fontSubSet: null,
+  zoom: 0.4,
+  setZoom: (zoom) => set({ zoom }),
   triggerSwitch: () => {
     set((state) => ({ switch: !state.switch }));
   },

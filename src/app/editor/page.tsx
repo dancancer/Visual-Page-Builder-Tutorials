@@ -19,7 +19,6 @@ const components: ComponentConfig[] = [TextComp, PicComp, WrapComp];
 function Page() {
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
   const canvasWarperRef = React.useRef<HTMLDivElement>(null);
-  const zoomRatio = React.useRef(0.4);
   const {
     root,
     componentTree,
@@ -30,6 +29,8 @@ function Page() {
     addComponent,
     addComponentType,
     reorderComponent,
+    zoom,
+    setZoom,
   } = useEditorStore((state) => state);
 
   useEffect(() => {
@@ -61,23 +62,6 @@ function Page() {
     });
   }, [addComponentType]);
 
-  const zoom = useCallback(
-    (direction: 'zoomIn' | 'zoomOut' | 'reset') => {
-      const step = 0.1;
-      if (direction === 'zoomIn') {
-        zoomRatio.current = Math.min(3, zoomRatio.current + step);
-      } else if (direction === 'zoomOut') {
-        zoomRatio.current = Math.max(0.1, zoomRatio.current - step);
-      } else if (direction === 'reset') {
-        zoomRatio.current = 1;
-      }
-      canvasWarperRef.current!.style.width = `${900 * zoomRatio.current + 100}px`;
-      canvasWarperRef.current!.style.height = `${1600 * zoomRatio.current + 100}px`;
-      document.dispatchEvent(new Event('canvas-zoom'));
-    },
-    [zoomRatio],
-  );
-
   // 添加一个处理组件添加的公共函数
   const handleAddComponent = useCallback(
     (compName: string) => {
@@ -88,11 +72,9 @@ function Page() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const { type, direction, component, componentId, styleUpdates, propUpdates, componentType } = event.data;
+      const { type, component, componentId, styleUpdates, propUpdates, componentType } = event.data;
 
-      if (type === 'zoom' && direction) {
-        zoom(direction);
-      } else if (type === 'componentSelected' && component) {
+      if (type === 'componentSelected' && component) {
         setSelectedComponentId(component.id);
       } else if (type === 'addComponent' && componentType) {
         // 处理从画布拖拽添加组件
@@ -162,7 +144,12 @@ function Page() {
         }
         event.preventDefault();
         const direction = event.deltaY > 0 ? 'zoomOut' : 'zoomIn';
-        zoom(direction);
+        const step = 0.1;
+        if (direction === 'zoomIn') {
+          setZoom(Math.min(3, zoom + step));
+        } else if (direction === 'zoomOut') {
+          setZoom(Math.max(0.1, zoom - step));
+        }
         return false;
       },
       { passive: false },
@@ -173,7 +160,6 @@ function Page() {
       unsubscribe();
     };
   }, [
-    zoom,
     setSelectedComponentId,
     componentTree,
     updateComponentStyleProps,
@@ -181,6 +167,8 @@ function Page() {
     addComponent,
     handleAddComponent,
     reorderComponent,
+    zoom,
+    setZoom,
   ]);
 
   useEffect(() => {
@@ -219,15 +207,15 @@ function Page() {
           <div
             className="canvas"
             style={{
-              width: `${900 * zoomRatio.current}px`,
-              height: `${1600 * zoomRatio.current}px`,
+              width: `${900 * zoom}px`,
+              height: `${1600 * zoom}px`,
             }}
             ref={canvasWarperRef}
           >
             <iframe className=" h-full w-full" src="/canvas" ref={iframeRef}></iframe>
           </div>
           <TextToolbar onUpdateStyle={onUpdateStyle} />
-          <ZoomControl zoomRatio={zoomRatio.current} onZoomChange={zoom} />
+          <ZoomControl />
         </div>
         <div className="properties">
           <PropertyPanel />

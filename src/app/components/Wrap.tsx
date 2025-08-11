@@ -24,7 +24,7 @@ const WrapComp: ComponentConfig = {
     styleProps: {
       width: '200px',
       height: '150px',
-      position: 'relative',
+      position: 'absolute',
     },
   },
 };

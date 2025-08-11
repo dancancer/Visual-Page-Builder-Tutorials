@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect, ReactElement } from 'react';
+import { ReloadIcon } from '@radix-ui/react-icons';
 import { ComponentData } from '../common/types';
 import './ResizableWrapper.css';
 import ErrorBoundary from './ErrorBoundary';
@@ -43,6 +44,7 @@ const calculateTextComponentRecommendedSize = (data: ComponentData): { width: nu
 
   // 计算推荐尺寸
   const recommendedSize = getTextComponentSize(content, styleProps);
+  // console.log(recommendedSize);
 
   // 确保最小尺寸
   return {
@@ -52,7 +54,6 @@ const calculateTextComponentRecommendedSize = (data: ComponentData): { width: nu
 };
 
 interface ResizableWrapperProps {
-  children: React.ReactNode | React.ReactNode[];
   componentData: ComponentData;
   isSelected?: boolean;
   onSelect?: () => void;
@@ -62,6 +63,15 @@ interface ResizableWrapperProps {
   onTextEdit?: (text: string) => void;
   onAlignmentGuidesChange?: (guides: AlignmentGuide[]) => void; // New prop
   componentTree?: ComponentData[]; // New prop for alignment calculations
+  renderComponent: ({
+    componentData,
+    isEditing,
+    onBlur,
+  }: {
+    componentData: ComponentData;
+    isEditing?: boolean;
+    onBlur?: (target: React.FocusEvent<HTMLDivElement, Element>) => void;
+  }) => ReactElement<ComponentData, React.FunctionComponent<ComponentData>> | undefined;
 }
 
 /**
@@ -69,7 +79,6 @@ interface ResizableWrapperProps {
  * 提供拖拽、调整大小等功能
  */
 const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
-  children,
   componentData,
   isSelected,
   onSelect,
@@ -78,6 +87,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   onResizeComplete,
   onAlignmentGuidesChange,
   componentTree,
+  renderComponent,
 }) => {
   // 组件位置状态
   const [position, setPosition] = useState({
@@ -122,6 +132,9 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
   const [originalSize, setOriginalSize] = useState({ width: 0, height: 0, fontSize: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const [rotation, setRotation] = useState(0);
+  const [isRotating, setIsRotating] = useState(false);
+  const [startAngle, setStartAngle] = useState(0);
 
   /**
    * 处理鼠标按下事件，开始拖拽
@@ -172,7 +185,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
       // 获取元素的屏幕坐标
       const rect = wrapperRef.current?.getBoundingClientRect();
       if (!rect) return;
-      
+
       // 根据调整方向计算固定点坐标（使用屏幕坐标）
       let originX = rect.left;
       let originY = rect.top;
@@ -213,14 +226,29 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
           break;
       }
 
-      console.log('originX', originX);
-      console.log('originY', originY);
-      console.log('position', position);
-      console.log('size', size);
       // 存储固定点坐标用于调整大小计算
       setOriginPos({ x: originX, y: originY });
     },
-    [size, position, componentData],
+    [size, componentData],
+  );
+
+  const handleRotateStart = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      setIsRotating(true);
+
+      const rect = wrapperRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const startX = e.clientX - centerX;
+      const startY = e.clientY - centerY;
+
+      setStartAngle(Math.atan2(startY, startX) * (180 / Math.PI) - rotation);
+    },
+    [rotation],
   );
 
   /**
@@ -306,7 +334,6 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         // 计算新的宽度和高度（使用绝对值确保为正数）
         let newWidth = Math.max(MIN_DIMENSIONS.width, Math.abs(e.clientX - originX));
         let newHeight = Math.max(MIN_DIMENSIONS.height, Math.abs(e.clientY - originY));
-        
 
         // 如果是文本组件，则保持等比缩放
         if (componentData.config?.compName === 'Text') {
@@ -341,11 +368,11 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         // 获取元素的当前屏幕坐标
         const currentRect = wrapperRef.current?.getBoundingClientRect();
         if (!currentRect) return;
-        
+
         // 计算相对于文档的偏移量
         const offsetX = position.x - (currentRect.left - window.scrollX);
         const offsetY = position.y - (currentRect.top - window.scrollY);
-        
+
         // 根据固定点和新的尺寸计算新的位置
         let newX = position.x;
         let newY = position.y;
@@ -398,9 +425,35 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         setSize({ width: newWidth, height: newHeight });
         setPosition({ x: newX, y: newY });
         onResize?.(newWidth, newHeight);
+      } else if (isRotating) {
+        const rect = wrapperRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        const currentX = e.clientX - centerX;
+        const currentY = e.clientY - centerY;
+
+        const angle = Math.atan2(currentY, currentX) * (180 / Math.PI);
+        setRotation(angle - startAngle);
       }
     },
-    [isDragging, isResizing, startPos, onMove, componentData, componentTree, originPos, position, resizeDirection, onResize, size],
+    [
+      isDragging,
+      isResizing,
+      startPos,
+      onMove,
+      componentData,
+      componentTree,
+      originPos,
+      position,
+      resizeDirection,
+      onResize,
+      size,
+      isRotating,
+      startAngle,
+    ],
   );
 
   /**
@@ -463,9 +516,14 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
           setPosition({ x: newLeft, y: newTop });
         }, 0);
       }
+    } else if (isRotating) {
+      updateComponentStyle({
+        transform: `rotate(${rotation}deg)`,
+      });
     }
     setIsDragging(false);
     setIsResizing(false);
+    setIsRotating(false);
     setAlignmentGuides([]);
     setOverlappingSlotComponent(null);
   }, [
@@ -479,11 +537,13 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
     originalSize.fontSize,
     updateComponentStyle,
     overlappingSlotComponent,
+    isRotating,
+    rotation,
   ]);
 
   // 添加和移除事件监听器
   React.useEffect(() => {
-    if (isDragging || isResizing) {
+    if (isDragging || isResizing || isRotating) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -491,7 +551,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
+  }, [isDragging, isResizing, isRotating, handleMouseMove, handleMouseUp]);
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -516,6 +576,12 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   useEffect(() => {
     onAlignmentGuidesChange?.(alignmentGuides);
   }, [alignmentGuides, onAlignmentGuidesChange]);
+
+  useEffect(() => {
+    if (isResizing) {
+      onResize?.(size.width, size.height);
+    }
+  }, [size, isResizing, onResize]);
 
   const stylePosition = useMemo(() => {
     return componentData.styleProps?.position || 'static';
@@ -562,7 +628,6 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   return (
     <ErrorBoundary>
       <div
-        contentEditable={isEditing && componentData.config?.isEditable}
         suppressContentEditableWarning={true}
         onBlur={handleBlur}
         ref={wrapperRef}
@@ -577,6 +642,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
           left: `${position.x}px`,
           top: `${position.y}px`,
           position: stylePosition,
+          transform: `rotate(${rotation}deg)`,
         }}
         onClick={(e) => {
           e.stopPropagation();
@@ -587,7 +653,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
-        {children}
+        {renderComponent({ componentData, isEditing, onBlur: handleBlur })}
         {isSelected && !isEditing && (
           <>
             <div
@@ -607,6 +673,9 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
               {['ne', 'nw', 'se', 'sw'].map((direction) => (
                 <div key={direction} className={`resize-handle ${direction}`} onMouseDown={(e) => handleResizeStart(e, direction)} />
               ))}
+            </div>
+            <div className="rotate-handle" onMouseDown={handleRotateStart}>
+              <ReloadIcon />
             </div>
           </>
         )}

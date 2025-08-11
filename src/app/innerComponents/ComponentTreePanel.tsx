@@ -110,7 +110,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
 
 const ComponentTreePanel: React.FC = () => {
   const { root, componentTree, removeComponent, reorderComponent, setSelectedComponentId } = useEditorStore((state) => state);
-  const [activeTab, setActiveTab] = useState('tree');
+  const [activeTab, setActiveTab] = useState('library');
 
   const handleDragStart = useCallback((e: React.DragEvent, componentId: number) => {
     e.dataTransfer.setData('componentId', componentId.toString());

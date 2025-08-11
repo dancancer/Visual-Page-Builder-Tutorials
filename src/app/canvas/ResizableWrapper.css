@@ -120,3 +120,23 @@
 .resizable-wrapper:hover .drag-handle {
   pointer-events: auto;
 }
+
+.rotate-handle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.rotate-handle:active {
+  cursor: grabbing;
+}
+
+.resizable-wrapper.dragging .rotate-handle{
+  visibility: hidden;
+}

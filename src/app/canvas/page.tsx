@@ -98,6 +98,25 @@ function Page() {
           )
         );
       }
+      const renderRealComponent = (componentData: ComponentData) => {
+        return (
+          comp.config.compType &&
+          React.createElement(
+            comp.config.compType,
+            {
+              compProps: mergedCompConfig,
+              styleProps: mergedStyleConfig,
+              config: {
+                name: comp.config.name,
+                compName: componentData.config?.compName || '',
+              },
+              isEditing: componentData.isEditing,
+              onBlur: componentData.onBlur,
+            },
+            ...childNodeList,
+          )
+        );
+      };
       return (
         <ResizableWrapper
           key={component.id}
@@ -106,21 +125,8 @@ function Page() {
           onSelect={() => handleSelectComponent(component)}
           onAlignmentGuidesChange={setAlignmentGuides}
           componentTree={compTree}
-        >
-          {comp.config.compType &&
-            React.createElement(
-              comp.config.compType,
-              {
-                compProps: mergedCompConfig,
-                styleProps: mergedStyleConfig,
-                config: {
-                  name: comp.config.name,
-                  compName: component.config?.compName || '',
-                },
-              },
-              ...childNodeList,
-            )}
-        </ResizableWrapper>
+          renderComponent={renderRealComponent}
+        ></ResizableWrapper>
       );
     },
     [compTree, selectedComponent, handleSelectComponent],

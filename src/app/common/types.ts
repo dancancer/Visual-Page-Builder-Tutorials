@@ -24,6 +24,8 @@ export type ComponentData = {
     isEditable?: boolean;
     isContainer?: boolean;
   };
+  isEditing?: boolean;
+  onBlur?: (target: React.FocusEvent<HTMLDivElement, Element>) => void;
 };
 
 export type ComponentConfig = {
