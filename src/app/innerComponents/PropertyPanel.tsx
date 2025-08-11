@@ -695,7 +695,7 @@ const PropertyPanel: React.FC = () => {
 
   return (
     <div className={`${editorStyles.container.panel} ${editorStyles.text.primary}`}>
-      <h3 className={`text-lg font-medium mb-4 ${editorStyles.text.primary}`}>{`${component.config?.name || '组件'}编辑`}</h3>
+      <h3 className={`text-lg font-medium mb-4 ${editorStyles.text.primary}`}>{`${component.config?.name || '组件'}组件属性编辑`}</h3>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={editorStyles.tabs.list}>
           <TabsTrigger
@@ -704,12 +704,12 @@ const PropertyPanel: React.FC = () => {
           >
             属性
           </TabsTrigger>
-          <TabsTrigger
+          {/* <TabsTrigger
             value="styles"
             className={`${editorStyles.tabs.trigger} ${editorStyles.text.secondary} data-[state=active]:${editorStyles.text.primary}`}
           >
             样式
-          </TabsTrigger>
+          </TabsTrigger> */}
         </TabsList>
         <TabsContent value="props">
           <div className={editorStyles.container.section}>
