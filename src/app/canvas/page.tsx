@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect } from 'react';
-import { ComponentConfig, ComponentData } from '../common/types';
+import { ComponentConfig, ComponentData, FontSubSet } from '../common/types';
 import './index.css';
 import { TextComp, PicComp, WrapComp } from '../components';
 import useEditorStore from '../store/editorStore';
@@ -9,12 +9,14 @@ import ResizableWrapper from './ResizableWrapper';
 import AlignmentGuides from './AlignmentGuides';
 import { eventBus } from '../utils/eventBus';
 import { listenToParentMessages, MessagePayload } from '../utils/messageBus';
+import { injectWebFont } from '../utils/textUtils';
 
 // 可用组件列表
 const components: ComponentConfig[] = [TextComp, PicComp, WrapComp];
 
 function Page() {
   // 组件状态管理
+  const [fontSubSet, setFontSubSet] = React.useState<FontSubSet>();
   const [compTree, setCompTree] = React.useState<ComponentData[]>([]);
   const [root, setRoot] = React.useState<ComponentData | undefined>(undefined);
   const [selectedComponent, setSelectedComponent] = React.useState<ComponentData | null>(null);
@@ -180,6 +182,17 @@ function Page() {
     );
   };
 
+  useEffect(() => {
+    if (fontSubSet) {
+      for (const fontName in fontSubSet) {
+        const fontData = fontSubSet[fontName].fontData;
+        console.log(fontData);
+        // const fontDataUrl = URL.createObjectURL(new Blob([fontData], { type: 'application/octet-stream' }));
+        injectWebFont(fontName, fontData, 'normal', 'normal');
+      }
+    }
+  }, [fontSubSet]);
+
   /**
    * 监听父窗口消息和滚轮事件
    */
@@ -240,7 +253,12 @@ function Page() {
             );
           }
           break;
+        case 'FONT_CHANGE':
+          setFontSubSet(payload.data as FontSubSet);
+          break;
       }
+
+      // 处理字体变化
     };
 
     const handleWheel = (event: WheelEvent) => {

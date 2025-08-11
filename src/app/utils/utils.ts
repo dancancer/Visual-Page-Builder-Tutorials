@@ -1,5 +1,6 @@
 import { ComponentData } from '../common/types';
-import _ from 'lodash';
+import range from 'lodash/range';
+import uniq from 'lodash/uniq';
 
 export function deleteNodeAndChildren(tree: Array<ComponentData | undefined>, nodeId: number) {
   // 创建一个 Set 用于存储所有需要删除的节点 ID
@@ -70,7 +71,7 @@ function getPureText(str: string) {
  * @return {string}     uniq text
  */
 export function getUniqText(str: string) {
-  return _.uniq(str.split('')).join('');
+  return uniq(str.split('')).join('');
 }
 
 /**
@@ -80,7 +81,7 @@ export function getUniqText(str: string) {
  *
  * @type {string}
  */
-const basicText = String.fromCharCode.apply(this, _.range(33, 126));
+const basicText = String.fromCharCode.apply(this, range(33, 126));
 
 /**
  * get subset text

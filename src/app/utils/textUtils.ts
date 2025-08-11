@@ -50,3 +50,38 @@ export function calculateTextDimensions(text: string, styleProps: React.CSSPrope
 export function getTextComponentSize(text: string, styleProps: React.CSSProperties = {}): { width: number; height: number } {
   return calculateTextDimensions(text, styleProps);
 }
+
+export const BaseFontFamily = 'Arial,sans-serif';
+
+// utils/injectWebFont.ts
+const injectedFontId = 'custom-webfont-style';
+
+/**
+ * 注入 Base64 WebFont 到页面
+ * @param fontName 字体名称（CSS中使用的名字）
+ * @param fontDataUrl Base64 Data URL，例如 "data:font/woff2;base64,xxxx"
+ * @param fontWeight 可选，默认 normal
+ * @param fontStyle 可选，默认 normal
+ */
+export function injectWebFont(fontName: string, fontDataUrl: string, fontWeight: string = 'normal', fontStyle: string = 'normal') {
+  // 清理旧的字体样式
+  const oldStyle = document.getElementById(injectedFontId + fontName);
+  if (oldStyle) {
+    oldStyle.remove();
+  }
+
+  // 创建新的 <style> 标签
+  const style = document.createElement('style');
+  style.id = injectedFontId + fontName;
+  style.type = 'text/css';
+  style.textContent = `
+    @font-face {
+      font-family: "${fontName}";
+      src: url("${fontDataUrl}") format("woff2");
+      font-weight: ${fontWeight};
+      font-style: ${fontStyle};
+    }
+  `;
+
+  document.head.appendChild(style);
+}

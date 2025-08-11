@@ -27,6 +27,7 @@
     overflow: scroll;
     overscroll-behavior-x: none;
     position: relative;
+    padding: 50px;
   }
 
   .zoom-ratio {
@@ -44,6 +45,9 @@
 
   .canvas {
     box-shadow: 0 0px 60px 16px #aaa;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    margin-right: 50%;
   }
 
   .properties {

@@ -1,13 +1,15 @@
 import { create } from 'zustand';
 
-import type { ComponentConfig, ComponentData } from '../common/types';
+import type { ComponentConfig, ComponentData, FontSubSet } from '../common/types';
 import { deleteNodeAndChildren } from '../utils/utils';
+import { BaseFontFamily } from '../utils/textUtils';
 
 interface EditorStore {
   switch: boolean;
   root: ComponentData;
   componentTree: Array<ComponentData>;
   componentTypes: ComponentConfig[]; // 新增：组件类型列表
+  fontSubSet: FontSubSet | null; // 新增：字体子集, fontName为字体名称，text为使用这个字体的所有文字，fontData为字体文件base64格式
   addComponent: (compName: string, parentId?: number) => void;
   removeComponent: (id: number) => void;
   reorderComponent: (draggedComponentId: number, targetComponentId: number) => void;
@@ -16,6 +18,35 @@ interface EditorStore {
   updateComponentProps: (id: number, newProps: ComponentData['compProps']) => void;
   updateComponentStyleProps: (id: number, newProps: ComponentData['styleProps']) => void;
   addComponentType: (componentType: ComponentConfig) => void; // 新增：添加组件类型的方法
+}
+
+const fetchFontData = async (fontName: string, text: string) => {
+  if (!fontName || !text) {
+    return '';
+  }
+  try {
+    const response = await fetch(`/api/font?fontName=${fontName}&text=${text}`);
+    const result = await response.json();
+    console.log('----------------', result);
+    return result.data;
+  } catch (error) {
+    console.error('Failed to fetch font subset:', error);
+    throw error;
+  }
+};
+
+async function updateFontSubset(fontName: string, text: string, fontSubset: FontSubSet | null): Promise<FontSubSet> {
+  let newText = text;
+  const newFontSubset = { ...fontSubset };
+  if (fontSubset) {
+    const fontSubsetItem = fontSubset[fontName];
+    if (fontSubsetItem) {
+      newText = fontSubsetItem.text + text;
+    }
+  }
+  const fontData = await fetchFontData(fontName, newText);
+  newFontSubset[fontName] = { text: newText, fontData };
+  return newFontSubset;
 }
 
 const useEditorStore = create<EditorStore>((set, get) => ({
@@ -35,6 +66,7 @@ const useEditorStore = create<EditorStore>((set, get) => ({
   componentTypes: [],
   selectedComponentId: null,
   selectedComponent: null,
+  fontSubSet: null,
   triggerSwitch: () => {
     set((state) => ({ switch: !state.switch }));
   },
@@ -177,7 +209,12 @@ const useEditorStore = create<EditorStore>((set, get) => ({
       ...component,
       compProps: { ...component.compProps, ...newProps },
     };
-
+    if (newProps?.content && component.styleProps?.fontFamily && component.styleProps?.fontFamily !== BaseFontFamily) {
+      const { fontSubSet } = get();
+      updateFontSubset(component.styleProps?.fontFamily as string, newProps.content as string, fontSubSet).then((newFontSubset) => {
+        set(() => ({ fontSubSet: newFontSubset }));
+      });
+    }
     set(() => ({ componentTree: newTree }));
   },
   updateComponentStyleProps: (id: number, newProps: ComponentData['styleProps']) => {
@@ -190,7 +227,12 @@ const useEditorStore = create<EditorStore>((set, get) => ({
       ...component,
       styleProps: { ...component.styleProps, ...newProps },
     };
-
+    if (newProps?.fontFamily && newProps?.fontFamily !== BaseFontFamily && component.compProps?.content) {
+      const { fontSubSet } = get();
+      updateFontSubset(newProps?.fontFamily as string, component.compProps?.content as string, fontSubSet).then((newFontSubset) => {
+        set(() => ({ fontSubSet: newFontSubset }));
+      });
+    }
     set(() => ({ componentTree: newTree }));
   },
   addComponentType: (componentType: ComponentConfig) => {

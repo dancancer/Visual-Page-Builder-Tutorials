@@ -6,6 +6,7 @@ export type MessageType =
   | 'SELECT_COMPONENT'
   | 'ADD_CHILD_COMPONENT'
   | 'ZOOM_CANVAS'
+  | 'FONT_CHANGE'
   | 'CANVAS_READY';
 
 export interface AddChildComponentData {
@@ -14,7 +15,7 @@ export interface AddChildComponentData {
   componentId: number;
 }
 
-import type { ComponentConfig } from '../common/types';
+import type { ComponentConfig, FontSubSet } from '../common/types';
 import React from 'react';
 
 interface UpdateComponentTreeData {
@@ -24,7 +25,7 @@ interface UpdateComponentTreeData {
 
 export interface MessagePayload {
   type: MessageType;
-  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData | React.CSSProperties;
+  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData | React.CSSProperties | FontSubSet;
   componentId?: number;
   timestamp: number;
 }
@@ -32,7 +33,7 @@ export interface MessagePayload {
 // 主框架向画布发送消息
 export const sendMessageToCanvas = (
   type: MessageType,
-  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData,
+  data: Record<string, unknown> | unknown[] | AddChildComponentData | UpdateComponentTreeData | FontSubSet,
   componentId?: number,
 ) => {
   const iframe = document.querySelector<HTMLIFrameElement>('iframe[src="/canvas"]');

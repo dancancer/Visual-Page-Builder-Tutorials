@@ -45,3 +45,6 @@ export interface ComponentMetadata {
   name: string;
   props: PropConfig[];
 }
+
+export type FontSubSetItem = { text: string; fontData: string };
+export type FontSubSet = Record<string, FontSubSetItem>;

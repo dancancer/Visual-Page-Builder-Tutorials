@@ -18,12 +18,12 @@ const components: ComponentConfig[] = [TextComp, PicComp, WrapComp];
 
 function Page() {
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
-  const canvasRef = React.useRef<HTMLDivElement>(null);
   const canvasWarperRef = React.useRef<HTMLDivElement>(null);
   const zoomRatio = React.useRef(0.4);
   const {
     root,
     componentTree,
+    fontSubSet,
     updateComponentProps,
     updateComponentStyleProps,
     setSelectedComponentId,
@@ -31,6 +31,12 @@ function Page() {
     addComponentType,
     reorderComponent,
   } = useEditorStore((state) => state);
+
+  useEffect(() => {
+    if (fontSubSet) {
+      sendMessageToCanvas('FONT_CHANGE', fontSubSet);
+    }
+  }, [fontSubSet]);
 
   useEffect(() => {
     const handleComponentStyleUpdate = (componentId: number, styleUpdates: Record<string, string>) => {
@@ -65,7 +71,6 @@ function Page() {
       } else if (direction === 'reset') {
         zoomRatio.current = 1;
       }
-      canvasRef.current!.style.transform = `scale(${zoomRatio.current})`;
       canvasWarperRef.current!.style.width = `${900 * zoomRatio.current + 100}px`;
       canvasWarperRef.current!.style.height = `${1600 * zoomRatio.current + 100}px`;
       document.dispatchEvent(new Event('canvas-zoom'));
@@ -210,24 +215,16 @@ function Page() {
           <ComponentTreePanel />
         </div>
 
-        <div className="canvas-container flex justify-center items-center">
+        <div className="canvas-container">
           <div
-            className=" p-[50px]"
+            className="canvas"
             style={{
-              width: `${900 * zoomRatio.current + 100}px`,
-              height: `${1600 * zoomRatio.current + 100}px`,
+              width: `${900 * zoomRatio.current}px`,
+              height: `${1600 * zoomRatio.current}px`,
             }}
             ref={canvasWarperRef}
           >
-            <div
-              className=" canvas origin-top-left h-[1600px] w-[900px]"
-              style={{
-                transform: `scale(${zoomRatio.current})`,
-              }}
-              ref={canvasRef}
-            >
-              <iframe className=" h-full w-full" src="/canvas" ref={iframeRef}></iframe>
-            </div>
+            <iframe className=" h-full w-full" src="/canvas" ref={iframeRef}></iframe>
           </div>
           <TextToolbar onUpdateStyle={onUpdateStyle} />
           <ZoomControl zoomRatio={zoomRatio.current} onZoomChange={zoom} />

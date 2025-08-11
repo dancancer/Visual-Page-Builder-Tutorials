@@ -84,6 +84,5 @@ export async function getFontList() {
     const svg = await getSvg(key, key);
     fontList.push({ name: key, svg });
   }
-  console.log('fontList', fontList);
   return fontList;
 }

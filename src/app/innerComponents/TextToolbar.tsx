@@ -16,6 +16,7 @@ import {
 } from '@radix-ui/react-icons';
 import useEditorStore from '../store/editorStore';
 import { editorStyles } from '../styles/editorStyles';
+import { BaseFontFamily } from '../utils/textUtils';
 
 interface TextToolbarProps {
   onUpdateStyle?: (styleUpdates: Record<string, string>) => void;
@@ -33,6 +34,27 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ onUpdateStyle }) => {
   const [currentStyles, setCurrentStyles] = useState<React.CSSProperties>({});
   const [hasUnderline, setHasUnderline] = useState(false);
   const [hasStrikethrough, setHasStrikethrough] = useState(false);
+  const [fontList, setFontList] = useState<{ name: string; svg: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch font list from API
+  useEffect(() => {
+    const fetchFontList = async () => {
+      try {
+        const response = await fetch('/api/font/list');
+        const result = await response.json();
+        if (result.success) {
+          setFontList([{ name: BaseFontFamily, svg: '默认字体' }, ...result.data]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch font list:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFontList();
+  }, []);
 
   // Check if selected component is a text component
   useEffect(() => {
@@ -140,17 +162,6 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ onUpdateStyle }) => {
     };
   }, [isVisible, currentStyles, hasUnderline, hasStrikethrough, handleStyleUpdate, toggleUnderline]);
 
-  // Font family options
-  const fontFamilies = [
-    { value: 'Arial, sans-serif', label: 'Arial' },
-    { value: 'Helvetica, sans-serif', label: 'Helvetica' },
-    { value: 'Times New Roman, serif', label: 'Times New Roman' },
-    { value: 'Georgia, serif', label: 'Georgia' },
-    { value: 'Verdana, sans-serif', label: 'Verdana' },
-    { value: 'Tahoma, sans-serif', label: 'Tahoma' },
-    { value: 'Courier New, monospace', label: 'Courier New' },
-  ];
-
   // Font sizes
   const fontSizes = ['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'];
 
@@ -170,11 +181,17 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ onUpdateStyle }) => {
           onValueChange={(value) => handleStyleUpdate('fontFamily', value)}
           className={`${editorStyles.form.input} w-[120px] flex items-center justify-between`}
         >
-          {fontFamilies.map((font) => (
-            <SelectItem key={font.value} value={font.value} className="text-xs px-2 py-1 cursor-pointer hover:bg-gray-100 outline-none">
-              {font.label}
+          {loading ? (
+            <SelectItem value="loading" className="text-xs px-2 py-1 cursor-pointer hover:bg-gray-100 outline-none">
+              加载中...
             </SelectItem>
-          ))}
+          ) : (
+            fontList.map((font) => (
+              <SelectItem key={font.name} value={font.name} className="text-xs px-2 py-1 cursor-pointer hover:bg-gray-100 outline-none">
+                <div className=" w-[100px]" dangerouslySetInnerHTML={{ __html: font.svg }} />
+              </SelectItem>
+            ))
+          )}
         </Select>
       </div>
 
