@@ -26,27 +26,41 @@ const ComponentLibrary = () => {
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content className="overflow-hidden text-sm data-[state=closed]:accordion-up data-[state=open]:accordion-down">
-            <div
-              className="flex items-center ml-2 p-2 mb-2 text-sm text-gray-700 rounded cursor-pointer hover:bg-gray-100"
-              onClick={() => handleAddComponent('Text')}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('componentType', 'Text');
-              }}
-            >
-              <TextIcon className="w-4 h-4" />
-              <span className="ml-2">文本组件</span>
+            <div className="flex items-center justify-between ml-2 p-2 mb-2 text-sm text-gray-700 rounded cursor-pointer hover:bg-gray-100">
+              <div
+                className="flex items-center"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('componentType', 'Text');
+                }}
+              >
+                <TextIcon className="w-4 h-4" />
+                <span className="ml-2">文本组件</span>
+              </div>
+              <button
+                className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
+                onClick={() => handleAddComponent('Text')}
+              >
+                添加
+              </button>
             </div>
-            <div
-              className="flex items-center ml-2 p-2 text-sm text-gray-700 rounded cursor-pointer hover:bg-gray-100"
-              onClick={() => handleAddComponent('Pic')}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('componentType', 'Pic');
-              }}
-            >
-              <ImageIcon className="w-4 h-4" />
-              <span className="ml-2">图片组件</span>
+            <div className="flex items-center justify-between ml-2 p-2 text-sm text-gray-700 rounded cursor-pointer hover:bg-gray-100">
+              <div
+                className="flex items-center"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('componentType', 'Pic');
+                }}
+              >
+                <ImageIcon className="w-4 h-4" />
+                <span className="ml-2">图片组件</span>
+              </div>
+              <button
+                className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
+                onClick={() => handleAddComponent('Pic')}
+              >
+                添加
+              </button>
             </div>
           </Accordion.Content>
         </Accordion.Item>
@@ -62,16 +76,23 @@ const ComponentLibrary = () => {
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content className="overflow-hidden text-sm data-[state=closed]:accordion-up data-[state=open]:accordion-down">
-            <div
-              className="flex items-center ml-2 p-2 mb-2 text-sm text-gray-700 rounded cursor-pointer hover:bg-gray-100"
-              onClick={() => handleAddComponent('Wrap')}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('componentType', 'Wrap');
-              }}
-            >
-              <ContainerIcon className="w-4 h-4" />
-              <span className="ml-2">容器</span>
+            <div className="flex items-center justify-between ml-2 p-2 mb-2 text-sm text-gray-700 rounded cursor-pointer hover:bg-gray-100">
+              <div
+                className="flex items-center"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('componentType', 'Wrap');
+                }}
+              >
+                <ContainerIcon className="w-4 h-4" />
+                <span className="ml-2">容器</span>
+              </div>
+              <button
+                className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
+                onClick={() => handleAddComponent('Wrap')}
+              >
+                添加
+              </button>
             </div>
           </Accordion.Content>
         </Accordion.Item>
