@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PropConfig } from '../common/types';
-import useEditorStore from '../store/editorStore';
-import { useCanvasSync } from '../hooks/useCanvasSync';
-import { useStoreSync } from '../hooks/useStoreSync';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './uiComponents/Tabs';
-import { Select, SelectItem } from './uiComponents/Select';
-import { Switch } from './uiComponents/Switch';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from './uiComponents/Collapsible';
-import { editorStyles } from '../styles/editorStyles';
+import { PropConfig } from '../../common/types';
+import useEditorStore from '../../store/editorStore';
+import { useCanvasSync } from '../../hooks/useCanvasSync';
+import { useStoreSync } from '../../hooks/useStoreSync';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../innerComponents/uiComponents/Tabs';
+import { Select, SelectItem } from '../../innerComponents/uiComponents/Select';
+import { Switch } from '../../innerComponents/uiComponents/Switch';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../../innerComponents/uiComponents/Collapsible';
+import { editorStyles } from '../../styles/editorStyles';
 
 // CSS 属性分类
 const cssCategories = {

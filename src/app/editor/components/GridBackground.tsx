@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { DEFAULT_GRID_CONFIG } from '../utils/snappingUtils';
+import { DEFAULT_GRID_CONFIG } from '../../utils/snappingUtils';
 
 interface GridBackgroundProps {
   width: number;
@@ -9,18 +9,14 @@ interface GridBackgroundProps {
   showGrid: boolean;
 }
 
-const GridBackground: React.FC<GridBackgroundProps> = ({ 
-  width, 
-  height, 
-  showGrid 
-}) => {
+const GridBackground: React.FC<GridBackgroundProps> = ({ width, height, showGrid }) => {
   if (!showGrid || !DEFAULT_GRID_CONFIG.visible) {
     return null;
   }
 
   const gridSize = DEFAULT_GRID_CONFIG.size;
   const dots = [];
-  
+
   // Generate grid dots
   for (let x = 0; x <= width; x += gridSize) {
     for (let y = 0; y <= height; y += gridSize) {
@@ -36,21 +32,21 @@ const GridBackground: React.FC<GridBackgroundProps> = ({
             backgroundColor: 'rgba(0, 0, 0, 0.1)',
             borderRadius: '50%',
           }}
-        />
+        />,
       );
     }
   }
 
   return (
-    <div 
-      style={{ 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        width: `${width}px`, 
-        height: `${height}px`, 
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: `${width}px`,
+        height: `${height}px`,
         pointerEvents: 'none',
-        zIndex: 1
+        zIndex: 1,
       }}
     >
       {dots}

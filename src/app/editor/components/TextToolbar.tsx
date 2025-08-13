@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Toggle } from './uiComponents/Toggle';
-import { ToggleGroup, ToggleGroupItem } from './uiComponents/ToggleGroup';
-import { Select, SelectItem } from './uiComponents/Select';
+import { Toggle } from '../../innerComponents/uiComponents/Toggle';
+import { ToggleGroup, ToggleGroupItem } from '../../innerComponents/uiComponents/ToggleGroup';
+import { Select, SelectItem } from '../../innerComponents/uiComponents/Select';
 import {
   TextAlignLeftIcon,
   TextAlignCenterIcon,
@@ -14,9 +14,9 @@ import {
   StrikethroughIcon,
   UnderlineIcon,
 } from '@radix-ui/react-icons';
-import useEditorStore from '../store/editorStore';
-import { editorStyles } from '../styles/editorStyles';
-import { BaseFontFamily } from '../utils/textUtils';
+import useEditorStore from '../../store/editorStore';
+import { editorStyles } from '../../styles/editorStyles';
+import { BaseFontFamily } from '../../utils/textUtils';
 
 interface TextToolbarProps {
   onUpdateStyle?: (styleUpdates: Record<string, string>) => void;

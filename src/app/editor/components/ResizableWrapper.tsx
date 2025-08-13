@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, useCallback, useMemo, useEffect, ReactElement } from 'react';
 import { ReloadIcon } from '@radix-ui/react-icons';
-import { ComponentData } from '../common/types';
+import { ComponentData } from '../../common/types';
 import './ResizableWrapper.css';
 import ErrorBoundary from './ErrorBoundary';
 // import { eventBus } from '../utils/eventBus';
-import { sendMessageToParent } from '../utils/messageBus';
+import { eventBus } from '../../utils/eventBus';
 import {
   calculateGridSnap,
   shouldSnapToGrid,
@@ -16,8 +16,8 @@ import {
   DEFAULT_GRID_CONFIG,
   AlignmentGuide,
   CompRect,
-} from '../utils/snappingUtils';
-import { getTextComponentSize } from '../utils/textUtils';
+} from '../../utils/snappingUtils';
+import { getTextComponentSize } from '../../utils/textUtils';
 
 // 组件最小尺寸常量
 const MIN_DIMENSIONS = {
@@ -256,7 +256,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
    */
   const updateComponentStyle = useCallback(
     (styles: Record<string, string>) => {
-      sendMessageToParent('UPDATE_COMPONENT_STYLE', styles, componentData.id);
+      eventBus.emit('updateComponentStyle', { componentId: componentData.id!, styleUpdates: styles });
     },
     [componentData.id],
   );
@@ -264,7 +264,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
   const updateComponentProps = useCallback(
     (value: string | null) => {
       // 使用新的消息系统发送更新到主框架
-      sendMessageToParent('UPDATE_COMPONENT_PROPS', { content: value || '' }, componentData.id);
+      eventBus.emit('updateComponentProps', { componentId: componentData.id!, propsUpdates: { content: value || '' } });
     },
     [componentData.id],
   );
@@ -304,7 +304,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         let updatedAlignmentGuides: AlignmentGuide[] = [];
         if (currentBounds && componentTree && componentData.styleProps?.position === 'absolute') {
           const otherBounds = componentTree
-            .filter((comp) => comp.id !== componentData.id && comp.id !== componentData.parentId)
+            .filter((comp) => comp.id !== componentData.id && comp.id !== componentData.parentId && comp.id !== -1)
             .map((comp) => getComponentRect(comp)) as CompRect[];
 
           updatedAlignmentGuides = calculateAlignmentGuides(currentBounds, otherBounds, DEFAULT_GRID_CONFIG.snapThreshold);
@@ -504,12 +504,15 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
           left: `${newLeft}px`,
           top: `${newTop}px`,
         });
-        // 向父窗口发送添加子组件的消息
-        sendMessageToParent('ADD_CHILD_COMPONENT', {
-          parentComponentId: overlappingSlotComponent.id,
-          componentId: componentData.id,
-          componentType: componentData.config?.compName,
-        });
+        if (overlappingSlotComponent.id !== undefined && componentData.config?.compName) {
+          // 向父窗口发送添加子组件的消息
+          eventBus.emit('addChildComponent', {
+            parentComponentId: overlappingSlotComponent.id,
+            componentId: componentData.id,
+            componentType: componentData.config?.compName,
+          });
+        }
+
         setTimeout(() => {
           // 2. 获取两个元素相对于视口的位置
 
@@ -598,9 +601,10 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
       const componentType = e.dataTransfer.getData('componentType');
       if (componentType) {
         // 向父窗口发送添加子组件的消息
-        sendMessageToParent('ADD_CHILD_COMPONENT', {
-          parentComponentId: componentData.id,
+        eventBus.emit('addComponent', {
+          parentComponentId: componentData.id!,
           componentType,
+          position: { x: 0, y: 0 },
         });
       }
     }
@@ -653,7 +657,6 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
-        {renderComponent({ componentData, isEditing, onBlur: handleBlur })}
         {isSelected && !isEditing && (
           <>
             <div
@@ -679,6 +682,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
             </div>
           </>
         )}
+        {renderComponent({ componentData, isEditing, onBlur: handleBlur })}
       </div>
     </ErrorBoundary>
   );

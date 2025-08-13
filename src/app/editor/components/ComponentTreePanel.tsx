@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { ComponentData } from '../common/types';
-import useEditorStore from '../store/editorStore';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './uiComponents/Tabs';
-import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem } from './uiComponents/ContextMenu';
-import { editorStyles } from '../styles/editorStyles';
+import { ComponentData } from '../../common/types';
+import useEditorStore from '../../store/editorStore';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../innerComponents/uiComponents/Tabs';
+import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem } from '../../innerComponents/uiComponents/ContextMenu';
+import { editorStyles } from '../../styles/editorStyles';
 import ComponentLibrary from './ComponentLibrary';
-import { sendMessageToCanvas } from '../utils/messageBus';
+import { eventBus } from '../../utils/eventBus';
 
 interface TreeNodeProps {
   component: ComponentData;
@@ -138,7 +138,7 @@ const ComponentTreePanel: React.FC = () => {
     (componentId: number) => {
       setSelectedComponentId(componentId);
       // 通知画布选中组件
-      sendMessageToCanvas('SELECT_COMPONENT', {}, componentId);
+      eventBus.emit('selectComponent', componentId);
     },
     [setSelectedComponentId],
   );

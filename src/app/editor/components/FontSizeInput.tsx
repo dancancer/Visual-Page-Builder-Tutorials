@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Select, SelectItem } from './uiComponents/Select';
+import { Select, SelectItem } from '../../innerComponents/uiComponents/Select';
 import type { CSSProperties } from 'react';
-import { editorStyles } from '../styles/editorStyles';
+import { editorStyles } from '../../styles/editorStyles';
 
 type FontSizeUnit = 'px' | 'rem' | 'em' | '%';
 
@@ -18,9 +18,7 @@ const FontSizeInput: React.FC<FontSizeInputProps> = ({ value = '16px', onChange 
       return { value: val, unit: 'px' as FontSizeUnit };
     }
     const match = String(val).match(/^(\d+(?:\.\d+)?)(px|rem|em|%)$/);
-    return match
-      ? { value: parseFloat(match[1]), unit: match[2] as FontSizeUnit }
-      : { value: 16, unit: 'px' as FontSizeUnit };
+    return match ? { value: parseFloat(match[1]), unit: match[2] as FontSizeUnit } : { value: 16, unit: 'px' as FontSizeUnit };
   };
 
   const { value: numValue, unit } = parseValue(value);

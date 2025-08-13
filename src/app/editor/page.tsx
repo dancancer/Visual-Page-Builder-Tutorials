@@ -3,58 +3,23 @@
 import React, { useCallback, useEffect } from 'react';
 import useEditorStore from '../store/editorStore';
 import './index.css';
-import PropertyPanel from '../innerComponents/PropertyPanel';
-import ComponentTreePanel from '../innerComponents/ComponentTreePanel';
+import PropertyPanel from './components/PropertyPanel';
+import ComponentTreePanel from './components/ComponentTreePanel';
 import TextComp from '../components/TextComp';
 import { ComponentConfig, ComponentData } from '../common/types';
 import { PicComp, WrapComp } from '../components';
 import { eventBus } from '../utils/eventBus';
 import Head from 'next/head';
-import { sendMessageToCanvas, listenToCanvasMessages, MessagePayload, AddChildComponentData } from '../utils/messageBus';
-import ZoomControl from '../innerComponents/ZoomControl';
-import TextToolbar from '../innerComponents/TextToolbar';
+import CanvasComponent from './components/CanvasComponent';
+import ZoomControl from './components/ZoomControl';
+import TextToolbar from './components/TextToolbar';
+import { AddChildComponentData } from '../utils/messageBus';
 
 const components: ComponentConfig[] = [TextComp, PicComp, WrapComp];
 
 function Page() {
-  const iframeRef = React.useRef<HTMLIFrameElement>(null);
   const canvasWarperRef = React.useRef<HTMLDivElement>(null);
-  const {
-    root,
-    componentTree,
-    fontSubSet,
-    updateComponentProps,
-    updateComponentStyleProps,
-    setSelectedComponentId,
-    addComponent,
-    addComponentType,
-    reorderComponent,
-    zoom,
-    setZoom,
-  } = useEditorStore((state) => state);
-
-  useEffect(() => {
-    if (fontSubSet) {
-      sendMessageToCanvas('FONT_CHANGE', fontSubSet);
-    }
-  }, [fontSubSet]);
-
-  useEffect(() => {
-    const handleComponentStyleUpdate = (componentId: number, styleUpdates: Record<string, string>) => {
-      const component = componentTree.find((item: ComponentData | undefined) => item?.id === componentId);
-      if (!component) {
-        console.error(`Component with id ${componentId} not found in componentTree`);
-        return;
-      }
-      updateComponentStyleProps(componentId, styleUpdates);
-    };
-
-    eventBus.on('updateComponentStyle', handleComponentStyleUpdate);
-
-    return () => {
-      eventBus.off('updateComponentStyle', handleComponentStyleUpdate);
-    };
-  }, [componentTree, updateComponentStyleProps]);
+  const { setSelectedComponentId, addComponent, addComponentType, zoom, setZoom, reorderComponent } = useEditorStore((state) => state);
 
   useEffect(() => {
     components.forEach((comp) => {
@@ -64,78 +29,30 @@ function Page() {
 
   // 添加一个处理组件添加的公共函数
   const handleAddComponent = useCallback(
-    (compName: string) => {
-      addComponent(compName);
+    (compName: string, parentId?: number) => {
+      addComponent(compName, parentId);
     },
     [addComponent],
   );
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const { type, component, componentId, styleUpdates, propUpdates, componentType } = event.data;
+    const handleAddComponentEvent = (data: { parentComponentId?: number; componentType: string; position: { x: number; y: number } }) => {
+      // 处理从画布拖拽添加组件
+      handleAddComponent(data.componentType, data.parentComponentId);
+    };
 
-      if (type === 'componentSelected' && component) {
-        setSelectedComponentId(component.id);
-      } else if (type === 'addComponent' && componentType) {
-        // 处理从画布拖拽添加组件
-        handleAddComponent(componentType);
-      } else if (type === 'updateComponentStyle' && componentId > -1 && styleUpdates) {
-        // 处理从 canvas 传来的样式更新
-        const component = componentTree.find((item: ComponentData | undefined) => item?.id === componentId);
-        if (!component) {
-          console.error(`Component with id ${componentId} not found in componentTree`);
-          return;
-        }
-        updateComponentStyleProps(componentId, styleUpdates);
-      } else if (type === 'updateComponentProps' && componentId > -1 && propUpdates) {
-        // 处理从 canvas 传来的属性更新
-        const component = componentTree.find((item: ComponentData | undefined) => item?.id === componentId);
-        if (!component) {
-          console.error(`Component with id ${componentId} not found in componentTree`);
-          return;
-        }
-        updateComponentProps(componentId, propUpdates);
+    const handleAddChildComponentEvent = (data: AddChildComponentData) => {
+      const addChildComponentData = data;
+      if (addChildComponentData.parentComponentId !== undefined && addChildComponentData.componentId !== undefined) {
+        const { parentComponentId, componentId } = addChildComponentData;
+        // 添加组件到指定的父组件
+        reorderComponent(componentId as number, parentComponentId as number);
       }
     };
 
-    const handleCanvasMessage = (payload: MessagePayload) => {
-      switch (payload.type) {
-        case 'UPDATE_COMPONENT_PROPS':
-          // 处理从画布传来的属性更新
-          if (payload.componentId !== undefined && payload.componentId > -1) {
-            const component = componentTree.find((item: ComponentData | undefined) => item?.id === payload.componentId);
-            if (!component) {
-              console.error(`Component with id ${payload.componentId} not found in componentTree`);
-              return;
-            }
-            updateComponentProps(payload.componentId, payload.data as ComponentData['compProps']);
-          }
-          break;
-        case 'UPDATE_COMPONENT_STYLE':
-          // 处理从画布传来的样式更新
-          if (payload.componentId !== undefined && payload.componentId > -1) {
-            const component = componentTree.find((item: ComponentData | undefined) => item?.id === payload.componentId);
-            if (!component) {
-              console.error(`Component with id ${payload.componentId} not found in componentTree`);
-              return;
-            }
-            updateComponentStyleProps(payload.componentId, payload.data as ComponentData['styleProps']);
-          }
-          break;
-        case 'ADD_CHILD_COMPONENT':
-          // 处理从画布传来的添加子组件请求
-          const addChildComponentData = payload.data as AddChildComponentData;
-          if (addChildComponentData.parentComponentId !== undefined && addChildComponentData.componentId !== undefined) {
-            const { parentComponentId, componentId } = addChildComponentData;
-            // 添加组件到指定的父组件
-            reorderComponent(componentId as number, parentComponentId as number);
-          }
-          break;
-      }
-    };
+    eventBus.on('addComponent', handleAddComponentEvent);
 
-    window.addEventListener('message', handleMessage);
-    const unsubscribe = listenToCanvasMessages(handleCanvasMessage);
+    eventBus.on('addChildComponent', handleAddChildComponentEvent);
     document.addEventListener(
       'wheel',
       function (event: WheelEvent) {
@@ -156,25 +73,17 @@ function Page() {
     );
 
     return () => {
-      window.removeEventListener('message', handleMessage);
-      unsubscribe();
+      eventBus.off('addComponent', handleAddComponentEvent);
+      eventBus.off('addChildComponent', handleAddChildComponentEvent);
     };
-  }, [
-    setSelectedComponentId,
-    componentTree,
-    updateComponentStyleProps,
-    updateComponentProps,
-    addComponent,
-    handleAddComponent,
-    reorderComponent,
-    zoom,
-    setZoom,
-  ]);
+  }, [addComponent, handleAddComponent, zoom, setZoom]);
 
-  useEffect(() => {
-    // 使用新的消息系统发送更新
-    sendMessageToCanvas('UPDATE_COMPONENT_TREE', { componentTree, root });
-  }, [root, componentTree]);
+  const handleComponentSelect = useCallback(
+    (component: ComponentData) => {
+      setSelectedComponentId(component.id ?? -1);
+    },
+    [setSelectedComponentId],
+  );
 
   const onUpdateStyle = useCallback((styleUpdates: Record<string, string>) => {
     const state = useEditorStore.getState();
@@ -183,9 +92,6 @@ function Page() {
       if (component && component.config?.compName === 'Text') {
         // Update style props in the store
         state.updateComponentStyleProps(state.selectedComponentId, styleUpdates);
-
-        // Send message to canvas
-        sendMessageToCanvas('UPDATE_COMPONENT_STYLE', styleUpdates, state.selectedComponentId);
       }
     }
   }, []);
@@ -212,7 +118,7 @@ function Page() {
             }}
             ref={canvasWarperRef}
           >
-            <iframe className=" h-full w-full" src="/canvas" ref={iframeRef}></iframe>
+            <CanvasComponent onComponentSelect={handleComponentSelect} />
           </div>
           <TextToolbar onUpdateStyle={onUpdateStyle} />
           <ZoomControl />

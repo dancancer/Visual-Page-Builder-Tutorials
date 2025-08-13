@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { MinusIcon, PlusIcon } from '@radix-ui/react-icons';
-import { editorStyles } from '../styles/editorStyles';
-import useEditorStore from '../store/editorStore';
+import { editorStyles } from '../../styles/editorStyles';
+import useEditorStore from '../../store/editorStore';
 
 interface ZoomControlProps {
   minZoom?: number;

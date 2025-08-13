@@ -22,9 +22,7 @@ const HeightInput: React.FC<HeightInputProps> = ({ value = '100px', onChange }) 
         return { value: 0, unit: val as HeightUnit };
       }
       const match = String(val).match(/^(\d+(?:\.\d+)?)(px|%|vh|rem|em)$/);
-      return match
-        ? { value: parseFloat(match[1]), unit: match[2] as HeightUnit }
-        : { value: 100, unit: 'px' as HeightUnit };
+      return match ? { value: parseFloat(match[1]), unit: match[2] as HeightUnit } : { value: 100, unit: 'px' as HeightUnit };
     }
     return { value: 100, unit: 'px' as HeightUnit };
   };

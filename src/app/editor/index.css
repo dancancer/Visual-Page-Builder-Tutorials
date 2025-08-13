@@ -29,6 +29,12 @@
     position: relative;
     padding: 50px;
   }
+  .canvas-container.drag-over {
+    border-color: #52c41a;
+    border-width: 2px;
+    outline: 2px solid rgba(82, 196, 26, 0.2);
+    background-color: rgba(82, 196, 26, 0.1);
+  }
 
   .zoom-ratio {
     position: fixed;
@@ -45,12 +51,18 @@
 
   .canvas {
     box-shadow: 0 0px 60px 16px #aaa;
-    margin-left: 50%;
-    transform: translateX(-50%);
-    margin-right: 50%;
-    margin-top: 10px;
-    margin-bottom: 20px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    top: 50%;
+    background-color: white;
+    position:absolute;
+  }
 
+  .canvas.drag-over {
+    border-color: #52c41a;
+    border-width: 2px;
+    outline: 2px solid rgba(82, 196, 26, 0.2);
+    background-color: rgba(82, 196, 26, 0.1);
   }
 
   .properties {

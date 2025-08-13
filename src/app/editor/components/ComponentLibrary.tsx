@@ -3,7 +3,7 @@
 import React from 'react';
 import * as Accordion from '@radix-ui/react-accordion';
 import { ChevronDownIcon, ImageIcon, TextIcon, LayoutIcon, ContainerIcon, DashboardIcon } from '@radix-ui/react-icons';
-import useEditorStore from '../store/editorStore';
+import useEditorStore from '../../store/editorStore';
 
 const ComponentLibrary = () => {
   const addComponent = useEditorStore((state) => state.addComponent);
@@ -37,10 +37,7 @@ const ComponentLibrary = () => {
                 <TextIcon className="w-4 h-4" />
                 <span className="ml-2">文本组件</span>
               </div>
-              <button
-                className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
-                onClick={() => handleAddComponent('Text')}
-              >
+              <button className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600" onClick={() => handleAddComponent('Text')}>
                 添加
               </button>
             </div>
@@ -55,10 +52,7 @@ const ComponentLibrary = () => {
                 <ImageIcon className="w-4 h-4" />
                 <span className="ml-2">图片组件</span>
               </div>
-              <button
-                className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
-                onClick={() => handleAddComponent('Pic')}
-              >
+              <button className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600" onClick={() => handleAddComponent('Pic')}>
                 添加
               </button>
             </div>
@@ -87,10 +81,7 @@ const ComponentLibrary = () => {
                 <ContainerIcon className="w-4 h-4" />
                 <span className="ml-2">容器</span>
               </div>
-              <button
-                className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
-                onClick={() => handleAddComponent('Wrap')}
-              >
+              <button className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600" onClick={() => handleAddComponent('Wrap')}>
                 添加
               </button>
             </div>

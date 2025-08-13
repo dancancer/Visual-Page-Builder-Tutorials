@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AlignmentGuide } from '../utils/snappingUtils';
+import { AlignmentGuide } from '../../utils/snappingUtils';
 
 interface AlignmentGuidesProps {
   guides: AlignmentGuide[];
