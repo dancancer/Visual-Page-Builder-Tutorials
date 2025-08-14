@@ -18,7 +18,7 @@ interface CanvasComponentProps {
 
 function CanvasComponent({ onComponentSelect }: CanvasComponentProps) {
   // 从store获取状态
-  const { root, componentTree, fontSubSet, setSelectedComponentId, updateComponentProps, updateComponentStyleProps } = useEditorStore();
+  const { root, componentTree, fontSubSet, setSelectedComponentId } = useEditorStore();
 
   const [selectedComponent, setSelectedComponent] = React.useState<ComponentData | null>(null);
   const [alignmentGuides, setAlignmentGuides] = React.useState<{ type: 'vertical' | 'horizontal'; position: number; sourceComponentId?: number }[]>(

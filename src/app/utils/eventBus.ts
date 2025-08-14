@@ -1,5 +1,6 @@
 import mitt from 'mitt';
 import { AddChildComponentData } from './messageBus';
+import { ComponentData } from '../common/types';
 
 type EventBusEvents = {
   updateComponentStyle: { componentId: number; styleUpdates: Record<string, unknown> };
@@ -8,7 +9,7 @@ type EventBusEvents = {
   addComponent: { componentType: string; position: { x: number; y: number }; parentComponentId?: number };
   addChildComponent: AddChildComponentData;
   zoomCanvas: string;
-  updateComponentTree: { componentTree: any[]; root: any };
+  updateComponentTree: { componentTree: ComponentData[]; root: ComponentData };
   selectComponent: number;
   addComponentType: any;
 };
