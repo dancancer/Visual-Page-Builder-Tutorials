@@ -304,7 +304,7 @@ const ResizableWrapper: React.FC<ResizableWrapperProps> = ({
         let updatedAlignmentGuides: AlignmentGuide[] = [];
         if (currentBounds && componentTree && componentData.styleProps?.position === 'absolute') {
           const otherBounds = componentTree
-            .filter((comp) => comp.id !== componentData.id && comp.id !== componentData.parentId && comp.id !== -1)
+            .filter((comp) => (comp.id === componentData.parentId || comp.parentId === componentData.parentId) && comp.id !== -1)
             .map((comp) => getComponentRect(comp)) as CompRect[];
 
           updatedAlignmentGuides = calculateAlignmentGuides(currentBounds, otherBounds, DEFAULT_GRID_CONFIG.snapThreshold);

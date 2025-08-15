@@ -18,12 +18,34 @@ interface CanvasComponentProps {
 
 function CanvasComponent({ onComponentSelect }: CanvasComponentProps) {
   // 从store获取状态
-  const { root, componentTree, fontSubSet, setSelectedComponentId } = useEditorStore();
+  const { root, componentTree, fontSubSet, setSelectedComponentId, zoom } = useEditorStore();
 
   const [selectedComponent, setSelectedComponent] = React.useState<ComponentData | null>(null);
   const [alignmentGuides, setAlignmentGuides] = React.useState<{ type: 'vertical' | 'horizontal'; position: number; sourceComponentId?: number }[]>(
     [],
   );
+  const [canvasSize, setCanvasSize] = React.useState({ width: 900, height: 1600, top: 0, left: 0 });
+  const rootRef = React.useRef<HTMLDivElement>(null);
+
+  // 监听画布尺寸变化
+  React.useEffect(() => {
+    const updateCanvasSize = () => {
+      if (rootRef.current) {
+        const { width, height, top, left } = rootRef.current.getBoundingClientRect();
+        setCanvasSize({ width, height, top, left });
+      }
+    };
+
+    // 初始化尺寸
+    updateCanvasSize();
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', updateCanvasSize);
+
+    return () => {
+      window.removeEventListener('resize', updateCanvasSize);
+    };
+  }, [zoom]);
 
   /**
    * 合并组件配置
@@ -164,9 +186,22 @@ function CanvasComponent({ onComponentSelect }: CanvasComponentProps) {
     setSelectedComponentId(-1);
   };
   return (
-    <div className="root bg-white relative h-full w-full" id="root" onClick={onRootSelect} onDrop={handleDrop} onDragOver={handleDragOver}>
+    <div
+      ref={rootRef}
+      className="root bg-white relative h-full w-full"
+      id="root"
+      onClick={onRootSelect}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+    >
       {node}
-      <AlignmentGuides guides={alignmentGuides} canvasWidth={900} canvasHeight={1600} />
+      <AlignmentGuides
+        guides={alignmentGuides}
+        canvasWidth={canvasSize.width}
+        canvasHeight={canvasSize.height}
+        canvasTop={canvasSize.top}
+        canvasLeft={canvasSize.left}
+      />
     </div>
   );
 }
